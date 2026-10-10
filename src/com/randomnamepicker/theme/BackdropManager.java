@@ -154,6 +154,8 @@ public final class BackdropManager {
     /** 全部还原（宿主退出清理用）。 */
     public void shutdown() {
         unregisterAutoAttach();
+        MediaClock.getInstance().shutdown();
+        ThemeAudio.getInstance().shutdown();
         List<Window> all = new ArrayList<>(sessions.keySet());
         for (Window w : all) {
             uninstall(w);
@@ -168,10 +170,28 @@ public final class BackdropManager {
                 s.apply();
             }
         }
+        // 动态背景与背景音的统一收口点：所有 UI 改动最终都走 reapply/reapplyAll
+        MediaClock.getInstance().syncFromStore();
+        ThemeAudio.getInstance().syncFromStore();
     }
 
     public void reapplyAll() {
         reapply(null);
+    }
+
+    // ===================== 预览复用（主题独立页 D5） =====================
+
+    /**
+     * 预览用 T2 表格单元格渲染器：与真实窗口**同一个渲染器与同一档位口径**
+     * （档 1 = alpha 232 / 档 2 = alpha 210），使预览里的表格融合观感与上窗一致。
+     * 档 0（原生）返回 {@code null} = 预览保持表格自身默认渲染器不动。
+     */
+    static TableCellRenderer previewTableCellRenderer() {
+        int tier = ThemeStore.getTableTier();
+        if (tier <= 0) {
+            return null;
+        }
+        return new TranslucentRenderer(tier == 2 ? 210 : 232);
     }
 
     // ===================== 单窗口会话 =====================
@@ -229,6 +249,7 @@ public final class BackdropManager {
         void detach() {
             window.removeComponentListener(sizeAdapter);
             window.removeWindowListener(closeAdapter);
+            MediaClock.getInstance().removeTarget(backdrop);
             restoreTables();
             restoreFlatten();
             JRootPane root = rootPane();
@@ -242,6 +263,12 @@ public final class BackdropManager {
         void apply() {
             ThemeStyle style = ThemeStore.resolve(category);
             backdrop.setStyle(style);
+            // 动态背景：登记/摘除重绘目标（帧由全局 MediaClock 推进，多窗口共享同一帧）
+            if (style.isAnimated()) {
+                MediaClock.getInstance().addTarget(backdrop);
+            } else {
+                MediaClock.getInstance().removeTarget(backdrop);
+            }
             if (style.isActive()) {
                 flattenContent();
                 applyTableTier();

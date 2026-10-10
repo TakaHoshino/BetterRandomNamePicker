@@ -15,6 +15,7 @@ import javax.swing.border.TitledBorder;
 public class SettingsWindow extends JDialog {
     private JCheckBox autoStartCheckBox;
     private JCheckBox minimizeToTrayCheckBox;
+    private JCheckBox autoShowBallCheckBox;
     private JButton exportLogButton;
     private JSlider radiusSlider;
     private JSlider opacitySlider;
@@ -22,6 +23,8 @@ public class SettingsWindow extends JDialog {
     private JLabel opacityValueLabel;
     private JButton lockButton;
     private JButton changePasswordButton;
+    /** 程序化载入配置期间为 true：避免"载入→滑块被夹取→监听器写回"把超范围值改小。 */
+    private boolean loadingSettings = false;
 
     public SettingsWindow(JFrame parent) {
         super(parent, "系统设置", true);
@@ -53,6 +56,17 @@ public class SettingsWindow extends JDialog {
         minimizeToTrayCheckBox.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         minimizeToTrayCheckBox.addActionListener(e -> {
             ConfigManager.setMinimizeToTray(minimizeToTrayCheckBox.isSelected());
+        });
+
+        // 新增：打开主程序后自动显示悬浮球（勾选后立即显示一次，便于确认效果）
+        autoShowBallCheckBox = new JCheckBox("打开主程序后自动显示悬浮球");
+        autoShowBallCheckBox.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        autoShowBallCheckBox.addActionListener(e -> {
+            boolean auto = autoShowBallCheckBox.isSelected();
+            ConfigManager.setAutoShowFloatingBall(auto);
+            if (auto && getParent() instanceof NamePickerApp) {
+                ((NamePickerApp) getParent()).showFloatingBallIfConfigured();
+            }
         });
 
         exportLogButton = new JButton("导出日志文件");
@@ -95,7 +109,8 @@ public class SettingsWindow extends JDialog {
         mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         JPanel startupPanel = createStartupPanel();
-        startupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        // 三行复选框（自启动 / 最小化到托盘 / 自动显示悬浮球）+ 间距与边框
+        startupPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         mainPanel.add(startupPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
@@ -132,22 +147,20 @@ public class SettingsWindow extends JDialog {
         add(scrollPane, BorderLayout.CENTER);
 
         radiusSlider.addChangeListener(e -> {
+            if (loadingSettings) {
+                return;
+            }
             int radius = radiusSlider.getValue();
             radiusValueLabel.setText(radius + " 像素");
             saveFloatingBallSettings();
         });
 
         opacitySlider.addChangeListener(e -> {
-            int opacity = opacitySlider.getValue();
-            String opacityText;
-            if (opacity < 100) {
-                opacityText = opacity + " (高透明)";
-            } else if (opacity < 180) {
-                opacityText = opacity + " (半透明)";
-            } else {
-                opacityText = opacity + " (低透明)";
+            if (loadingSettings) {
+                return;
             }
-            opacityValueLabel.setText(opacityText);
+            int opacity = opacitySlider.getValue();
+            opacityValueLabel.setText(opacityText(opacity));
             saveFloatingBallSettings();
         });
     }
@@ -171,9 +184,15 @@ public class SettingsWindow extends JDialog {
         minimizePanel.add(minimizeToTrayCheckBox);
         minimizePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        JPanel autoShowBallPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        autoShowBallPanel.add(autoShowBallCheckBox);
+        autoShowBallPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
         panel.add(autoStartPanel);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(minimizePanel);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(autoShowBallPanel);
 
         return panel;
     }
@@ -246,29 +265,58 @@ public class SettingsWindow extends JDialog {
         ));
         panel.add(lockButton);
         panel.add(changePasswordButton);
+        // 仍在使用源码内置默认密码时给出醒目提示（该密码写在源码里，等于未设防）
+        if (PasswordManager.isUsingBuiltinDefaultPassword()) {
+            JLabel warn = new JLabel("⚠ 当前仍是内置默认密码（写在源码里，等于未设防），建议点“修改密码”更换");
+            warn.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+            warn.setForeground(new Color(0xC0, 0x30, 0x30));
+            panel.add(warn);
+        }
         return panel;
     }
 
     private void loadSettings() {
-        autoStartCheckBox.setSelected(ConfigManager.isAutoStartEnabled());
-        minimizeToTrayCheckBox.setSelected(ConfigManager.isMinimizeToTray());
-        int radius = ConfigManager.getFloatingBallRadius();
-        radiusSlider.setValue(radius);
-        radiusValueLabel.setText(radius + " 像素");
+        // 载入期间屏蔽滑块的写回：半径允许超出滑块范围（内部只判下界，无上界），
+        // 若不屏蔽，"setValue 被夹到滑块上限 → 监听器保存" 会把用户/手工写的大值改小。
+        loadingSettings = true;
+        try {
+            autoStartCheckBox.setSelected(ConfigManager.isAutoStartEnabled());
+            minimizeToTrayCheckBox.setSelected(ConfigManager.isMinimizeToTray());
+            autoShowBallCheckBox.setSelected(ConfigManager.isAutoShowFloatingBall());
 
-        int opacity = ConfigManager.getFloatingBallOpacity();
-        opacitySlider.setValue(opacity);
-        String opacityText;
-        if (opacity < 100) {
-            opacityText = opacity + " (高透明)";
-        } else if (opacity < 180) {
-            opacityText = opacity + " (半透明)";
-        } else {
-            opacityText = opacity + " (低透明)";
+            int radius = ConfigManager.getFloatingBallRadius();
+            radiusSlider.setValue(radius); // 超出 30–100 时滑块只做显示夹取，不回写配置
+            radiusValueLabel.setText(radius + " 像素" + radiusOutOfSliderHint(radius));
+
+            int opacity = ConfigManager.getFloatingBallOpacity();
+            opacitySlider.setValue(opacity);
+            opacityValueLabel.setText(opacityText(opacity));
+        } finally {
+            loadingSettings = false;
         }
-        opacityValueLabel.setText(opacityText);
 
         updateLockButtonText();
+    }
+
+    /** 半径超出滑块可视范围时的提示（配置值本身不受滑块限制）。 */
+    private String radiusOutOfSliderHint(int radius) {
+        if (radius > radiusSlider.getMaximum()) {
+            return "（大于滑块上限 " + radiusSlider.getMaximum() + "，滑块仅作显示）";
+        }
+        if (radius < radiusSlider.getMinimum()) {
+            return "（小于滑块下限 " + radiusSlider.getMinimum() + "，滑块仅作显示）";
+        }
+        return "";
+    }
+
+    private String opacityText(int opacity) {
+        if (opacity < 100) {
+            return opacity + " (高透明)";
+        }
+        if (opacity < 180) {
+            return opacity + " (半透明)";
+        }
+        return opacity + " (低透明)";
     }
 
     private void toggleLock() {

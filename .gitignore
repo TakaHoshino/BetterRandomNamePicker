@@ -25,6 +25,8 @@ bin/
 logs/
 log/
 *.log
+# 配置/主题设置的上一版备份默认放 log/ 下（含口令散列，绝不入库；log/ 已整体忽略）
+log/*.bak
 #====System files===
 .DS_Store
 Thumbs.db
@@ -44,7 +46,31 @@ ONLY ADMIN/
 RandomNamePicker.jar.stage1bak
 
 #====本地辅助文件（不入库）====
+tools/theme-smoke/classes/
+lib/*.jar
 release_text
 推送清单.md
 .p0fix_originals/
+.themeui_originals/
+.themeui2_originals/
+.themeui3_originals/
+theme_ui_shots/
 V*.xml
+
+#====宣传片管线（video/）====
+# 注意：上面的 out/ 与 log/ data/ 规则是全深度通配，会连 video/out（交付物）一起吞掉。
+# git 必须先取消忽略目录本身，才能看到目录里的文件。
+!video/out/
+!video/out/**
+# 体积大且可由工具再生，不入库：
+video/frames/
+video/demo/
+video/build/seg/
+video/build/seg_nosub/
+video/build/qc/*/
+video/build/probe/
+video/tools/classes/
+video/build/tools/classes/
+video/assets/*.wav
+# 发布产物只作为 GitHub Release 附件，不入库
+V*.jar

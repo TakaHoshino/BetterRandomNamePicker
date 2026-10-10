@@ -14,6 +14,9 @@ import com.randomnamepicker.model.Scheme;
 import com.randomnamepicker.plugin.HostEvent;
 import com.randomnamepicker.plugin.PluginManager;
 import com.randomnamepicker.plugin.UiZone;
+import com.randomnamepicker.theme.BackdropManager;
+import com.randomnamepicker.theme.ThemeStore;
+import com.randomnamepicker.theme.ThemeWindow;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.util.List;
@@ -42,6 +45,8 @@ public class NamePickerApp extends JFrame implements ModeHost {
     private boolean isFloatingBallVisible = false;
     private ModeHandler currentModeHandler;
     private JMenu pluginMenu;
+    /** 本轮新增：“主题”菜单中的启用复选项（展开菜单时以 ThemeStore 为准同步）。 */
+    private JCheckBoxMenuItem themeEnabledItem;
     private JPanel pluginButtonArea;   // 插件 UI 槽二期：主窗插件按钮区（按钮阵下方，两列向下）
     private JPanel pluginHeaderPanel;  // 插件区标识行：左“插件”标识 + 右侧分隔线（仅插件按钮存在时显示）
     private JLabel pluginCaptionLabel;
@@ -82,7 +87,9 @@ public class NamePickerApp extends JFrame implements ModeHost {
         PluginManager.getInstance().addUIListener(this::onPluginSetChanged);
 
         // 宿主内建主题：注册全局窗口侦测（窗口打开即自动装配背景；默认关闭 → 零影响）
-        com.randomnamepicker.theme.BackdropManager.getInstance().registerAutoAttach();
+        BackdropManager.getInstance().registerAutoAttach();
+        // 可选 ImageIO 解码插件（lib/*.jar）：提前扫描并注册，使主题图库的“可解码格式”尽早确定
+        com.randomnamepicker.theme.ThemeImageIo.ensurePluginsLoaded();
     }
 
     private void restoreLastScheme() {
@@ -133,6 +140,7 @@ public class NamePickerApp extends JFrame implements ModeHost {
         JMenuBar menuBar = new JMenuBar();
         pluginMenu = new JMenu("插件");
         menuBar.add(pluginMenu);
+        menuBar.add(buildThemeMenu());
         setJMenuBar(menuBar);
 
         displayLabel = new JLabel("请选择方案和模式后开始抽取", SwingConstants.CENTER);
@@ -166,6 +174,42 @@ public class NamePickerApp extends JFrame implements ModeHost {
         });
         modeComboBox = new JComboBox<>(ModeRegistry.getDisplayNames().toArray(new String[0]));
         modeComboBox.setToolTipText("选择抽取模式");
+    }
+
+    /** “主题”菜单（本轮新增入口）：启用复选 + 打开独立页；打开菜单时同步开关状态。 */
+    private JMenu buildThemeMenu() {
+        JMenu themeMenu = new JMenu("主题");
+        themeEnabledItem = new JCheckBoxMenuItem("启用照片背景");
+        themeEnabledItem.addActionListener(e -> {
+            ThemeStore.setEnabled(themeEnabledItem.isSelected());
+            BackdropManager.getInstance().reapplyAll();
+        });
+        JMenuItem themeSettingsItem = new JMenuItem("背景主题设置…");
+        themeSettingsItem.addActionListener(e -> showThemeWindow());
+        themeMenu.add(themeEnabledItem);
+        themeMenu.addSeparator();
+        themeMenu.add(themeSettingsItem);
+        themeMenu.addMenuListener(new javax.swing.event.MenuListener() {
+            @Override
+            public void menuSelected(javax.swing.event.MenuEvent e) {
+                // 状态可能由独立页/设置窗改变，展开时以 store 为准
+                themeEnabledItem.setSelected(ThemeStore.isEnabled());
+            }
+
+            @Override
+            public void menuDeselected(javax.swing.event.MenuEvent e) {
+            }
+
+            @Override
+            public void menuCanceled(javax.swing.event.MenuEvent e) {
+            }
+        });
+        return themeMenu;
+    }
+
+    /** 打开“背景主题设置”独立页（无模态、单实例；主题功能的唯一完整页面）。 */
+    public void showThemeWindow() {
+        ThemeWindow.openWindow(this);
     }
 
     private void setupLayout() {
@@ -718,6 +762,17 @@ public class NamePickerApp extends JFrame implements ModeHost {
         ConfigWindow configWindow = new ConfigWindow(this, nameManager, schemeManager);
         configWindow.setVisible(true);
         LogManager.log("名单管理", "打开配置窗口");
+    }
+
+    /**
+     * 新增设置项「打开主程序后自动显示悬浮球」：启动时由 Main 调用；
+     * 设置窗勾选该项时也会调用一次，便于立即看到效果。已显示则不重复创建。
+     */
+    public void showFloatingBallIfConfigured() {
+        if (ConfigManager.isAutoShowFloatingBall() && !isFloatingBallVisible) {
+            showFloatingBall();
+            LogManager.log("按设置自动显示悬浮球", "BALL_AUTO_SHOW");
+        }
     }
 
     private void showFloatingBall() {

@@ -26,4 +26,31 @@ public enum BackdropMode {
         }
         return FILL;
     }
+
+    /** 中文显示名（主题独立页/设置窗/预览共用同一来源）。 */
+    public String label() {
+        switch (this) {
+            case CENTER:
+                return "居中";
+            case FIT:
+                return "适应（完整显示）";
+            case STRETCH:
+                return "拉伸";
+            case CROP:
+                return "自由裁切";
+            case FILL:
+            default:
+                return "填充（裁切填满）";
+        }
+    }
+
+    /** 全部显示名（与 {@link #values()} 同序）。 */
+    public static String[] labels() {
+        BackdropMode[] all = values();
+        String[] out = new String[all.length];
+        for (int i = 0; i < all.length; i++) {
+            out[i] = all[i].label();
+        }
+        return out;
+    }
 }

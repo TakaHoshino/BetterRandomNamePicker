@@ -49,6 +49,9 @@ public class Main {
                 mainApp.setVisible(true);
             }
 
+            // 新增设置项：打开主程序后自动显示悬浮球（默认关闭）
+            mainApp.showFloatingBallIfConfigured();
+
             // Stage3：后台线程加载插件，完成后 EDT 一次性刷新主窗/托盘（不阻塞 UI）
             PluginManager.getInstance().loadAllAsync();
         });
