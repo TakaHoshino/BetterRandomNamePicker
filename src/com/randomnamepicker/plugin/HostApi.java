@@ -6,7 +6,10 @@ package com.randomnamepicker.plugin;
  * <b>受支持公开 API 面（V1.1.0 基线 + 本期，插件可依赖）</b>：
  * <ul>
  *   <li>{@code plugin} 包全部（{@link Plugin}/{@link PluginContext}/{@link PluginManager} 只读查询/
- *       {@link UiZone}/{@link HostEvent}/{@link HostEventListener}/{@link HostApi}）；</li>
+ *       {@link UiZone}/{@link HostEvent}/{@link HostEventListener}/{@link HostApi}）；
+ *       级别 2 新增<b>菜单分组</b>接口：{@link PluginContext#addGroupedUiAction} 与
+ *       {@code addMainMenuAction/addTrayMenuAction/addFloatingBallMenuAction(String[] groupPath, String, ActionListener)}
+ *       重载（宿主按 {@code PluginManager.MenuAction#getGroupPath()} 渲染级联子菜单）；</li>
  *   <li>{@code mode} 包 {@link com.randomnamepicker.mode.ModeHandler}/{@link com.randomnamepicker.mode.ModeHost}
  *       （含本期新增只读几何查询与 default 上下文菜单方法）；</li>
  *   <li>{@code model} 只读类（Scheme/NumberRange/SeatConfig 只读用法）；</li>
@@ -37,7 +40,10 @@ public final class HostApi {
 
     /**
      * 插件 API 级别（唯一兼容门控）。基线：V1.1.0 既有公开面 = 1；本期（宿主插件生态一期）新增
-     * 事件订阅/HostEvent 九类/isHostLocked/ModeHost 几何查询/ModeHandler 右键口子/状态查询等公开 API → 2。
+     * 事件订阅/HostEvent 九类/isHostLocked/ModeHost 几何查询/ModeHandler 右键口子/状态查询等公开 API → 2；
+     * 同一交付单元内补充的<b>菜单分组 API</b>（{@code addGroupedUiAction} 与带 {@code String[] groupPath}
+     * 的三类菜单便捷重载、{@code MenuAction.getGroupPath()}）为<b>纯新增、无破坏性变更</b>，按级别增量纪律
+     * 与既有级别 2 能力同属本交付单元，故仍为 2。
      */
     public static final int PLUGIN_API_LEVEL = 2;
 }

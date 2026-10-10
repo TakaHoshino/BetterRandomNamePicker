@@ -6,6 +6,7 @@ import com.randomnamepicker.mode.ModeHandler;
 import com.randomnamepicker.mode.ModeRegistry;
 import com.randomnamepicker.model.Scheme;
 import com.randomnamepicker.plugin.HostEvent;
+import com.randomnamepicker.plugin.MenuGroupSupport;
 import com.randomnamepicker.plugin.PluginManager;
 import com.randomnamepicker.ui.NamePickerApp;
 import com.randomnamepicker.ui.NumberPicker;
@@ -13,6 +14,7 @@ import com.randomnamepicker.ui.RollingPicker;
 import com.randomnamepicker.ui.SeatPicker;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
@@ -30,6 +32,7 @@ public class FloatingBall extends JWindow {
     private int ballOpacity;
     /** G2：最近一次已派发/记录的悬浮球 bounds（几何变化检测用，EDT）。 */
     private Rectangle lastReportedBounds;
+
 
     public FloatingBall(NamePickerApp mainApp) {
         super();
@@ -143,18 +146,12 @@ public class FloatingBall extends JWindow {
         settingsItem.addActionListener(e -> mainApp.showSettingsWindow());
         popupMenu.add(settingsItem);
 
-        // Stage3：悬浮球右键菜单插件项——每次新建悬浮球实例时读取当前已提交插件
+        // 插件右键项：按 MenuAction.groupPath 渲染（宿主通用分组渲染，见 MenuGroupSupport）。
         java.util.List<PluginManager.MenuAction> pluginActions =
                 PluginManager.getInstance().getFloatingBallMenuActions();
         if (!pluginActions.isEmpty()) {
             popupMenu.addSeparator();
-            for (PluginManager.MenuAction act : pluginActions) {
-                JMenuItem item = new JMenuItem(act.getTitle());
-                PluginManager.MenuAction captured = act;
-                item.addActionListener(e -> PluginManager.getInstance()
-                        .runMenuActionSafely(captured.getPluginName(), captured.getAction(), e));
-                popupMenu.add(item);
-            }
+            MenuGroupSupport.appendActions(popupMenu, pluginActions);
         }
 
         popupMenu.addSeparator();
@@ -167,6 +164,9 @@ public class FloatingBall extends JWindow {
         
         return popupMenu;
     }
+
+
+
 
     /** 内置模式既有右键配置项（按 modeId，行为与现版一致）。 */
     private void appendBuiltinModeItems(JPopupMenu popupMenu, String modeId) {

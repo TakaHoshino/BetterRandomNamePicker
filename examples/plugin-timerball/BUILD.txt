@@ -1,0 +1,107 @@
+# TimerBall（计时子球·正计时+倒计时合并版）编译打包说明
+
+宿主点名/抽取核心零改动。宿主侧新增的是**通用"菜单分组"API**（纯新增、向后兼容，无任何插件业务字样）：
+
+- `plugin/PluginContext.java`：`addGroupedUiAction(UiZone, String[] groupPath, String title, ActionListener)`，
+  以及带分组路径的便捷重载 `addMainMenuAction / addTrayMenuAction / addFloatingBallMenuAction / addSettingsWindowAction`；
+- `plugin/PluginManager.java`：`MenuAction` 新增 `groupPath` 字段与 `getGroupPath()`；
+- `plugin/MenuGroupSupport.java`（新文件）：宿主通用渲染器（按路径建/复用级联子菜单）；
+- `floating/FloatingBall.java`、`ui/NamePickerApp.java`、`main/Main.java`：三个渲染点统一调用该渲染器。
+
+本插件即调用上述接口注册菜单（`groupPath = {"计时子球"}` 与 `{"计时子球","倒计时设置"}`）。
+宿主 jar 重新构建后可用。
+
+## 源码文件（15 个 .java，默认包）
+
+| 文件 | 职责 |
+|---|---|
+| `TimerBallPlugin.java` | 插件入口（`Plugin`）：设置窗两个按钮 + 三类菜单 + 控制面板 + `onLoad`/`onUnload` |
+| `UpTracker.java` | 正计时控制器（左键观察监听 + 几何轮询 + 可见性回调 + 只读接口） |
+| `UpBall.java` | 正计时子球窗口（自绘圆窗 + 计时机） |
+| `UpBallConfig.java` | 正计时外观配置（`data/timerball_plugin.properties`） |
+| `UpSettingsDialog.java` | 正计时设置对话框（尺寸/三态配色/间距/恢复默认） |
+| `DownController.java` | 倒计时控制器（官方几何 API + `BALL_*` 事件 + 避让排布 + 命令入口；**不安装 AWT 监听**） |
+| `DownBall.java` | 倒计时子球窗口（**只提供右键菜单**；左键仅用于拖动） |
+| `DownFocus.java` | 全屏专注（番茄钟）窗口 |
+| `DownSession.java` | 倒计时核心状态机（时间戳计时、读秒、到时回调） |
+| `DownSettingsDialog.java` | 倒计时设置对话框（时长/形态/尺寸/五态配色与警戒阈值/全屏外观/提醒音频/交互/恢复默认） |
+| `TimerBallConfig.java` | 倒计时侧配置模型（`data/countdown_plugin.properties`） |
+| `TimerAlert.java` | 提醒音频播放（自定义音频 / 音量 / 重复 / 系统提示音兜底） |
+| `BallLayout.java` | 两球互不重叠的落位算法（纯计算） |
+| `TimerIcons.java` | **矢量图标库**（暂停/播放/复原/复位；Java2D 自绘，无图片资源）+ 屏幕夹取工具 |
+| `TimerControlPanel.java` | 控制面板窗口（一屏管理两个计时） |
+| `TimerBallSelfTest.java` | 自检 harness（**不打入 jar**） |
+
+jar 内**禁止**出现 `com/randomnamepicker/**` 的 `.class` 条目（宿主强制检查，违规整 jar 拒载 `BUNDLED_HOST_CLASS`）。
+
+## 编译（JDK 22；以宿主 jar 作 API 类路径）
+
+在 `examples/plugin-timerball` 目录执行：
+
+```
+javac -encoding UTF-8 -cp ..\..\RandomNamePicker.jar -d build TimerBallPlugin.java UpTracker.java UpBall.java UpBallConfig.java UpSettingsDialog.java DownController.java DownBall.java DownFocus.java DownSession.java DownSettingsDialog.java TimerBallConfig.java TimerAlert.java BallLayout.java TimerControlPanel.java
+```
+
+（若宿主源码刚改过，先重建宿主：按 `tools\build.bat` 的两条命令执行 `javac` + `jar cfm`，
+或用本仓库的等效流程；`out/` 存在时也可 `-cp ..\..\out`。）
+
+## 打包
+
+```
+jar cfm TimerBall.jar TimerBall.manifest -C build .
+```
+
+推荐直接用一键脚本 `tools\deploy-timerball.ps1`（编译 → 打包 → 复制 `plugins\` →
+移除被取代的旧 jar → 自检）。`TimerBall.manifest` 声明 `Api-Level-Min: 2`。
+
+## 安装 / 卸载
+
+- 安装：把 `TimerBall.jar` 复制到程序运行目录的 `plugins\`（与 `RandomNamePicker.jar`/`.exe` 同级），重启程序。
+  **注意**：本插件取代 `CountUpTimerBall.jar` 与 `CountdownTimer.jar`——三者同时存在会出现**两套**子球
+  （位置会互相避让，但功能重复），请删除旧的两个 jar（`deploy-timerball.ps1` 会自动处理）。
+- 卸载：删除该 jar 后重启（宿主机制：不做运行中热插拔）。插件私有数据
+  `data/timerball_plugin.properties`、`data/countdown_plugin.properties`、`data/countdown/`（音频目录）
+  不会被自动删除。
+
+## 自检
+
+```
+javac -encoding UTF-8 -cp "build;..\..\RandomNamePicker.jar" -d build TimerBallSelfTest.java
+java -cp "..\..\RandomNamePicker.jar;build" TimerBallSelfTest
+```
+
+110+ 项断言：落位算法（单球与旧算法一致 / 双子球不相交 / 屏幕中心与三子球 / 窄屏与全占用不抛异常）、
+**宿主分组接口存在性与插件调用方式**（`addGroupedUiAction`、三个 `String[] groupPath` 重载、`getGroupPath()`、
+`MenuGroupSupport`；插件源码必须用带 groupPath 的重载且不得出现 `▸` 约定）、倒计时"仅右键 + 点即冒出"
+（Actions 命令集 + 源码级检查：无单击延迟机制、无 AWT 监听、使用官方几何查询、具备避让注入与重排、
+`commandStart`/快捷时长先确保子球可见、位置夹回屏内）、全屏两个图标按钮与复原语义（`onToggle`/`onRestore`、
+`TimerIcons` pause/play/restore/夹取）、倒计时状态机、两份配置互不覆盖与往返/坏值回退、提醒音频兜底、
+jar 打包禁令与 Manifest 级别。退出码 0 = 全部通过。
+
+## 预期效果
+
+- 设置窗"插件"区出现 **「计时子球（正计时）」** 与 **「计时子球（倒计时）」** 两个按钮。
+- 主窗/托盘/悬浮球右键三类菜单一致，悬浮球右键里呈现为**多层级联子菜单**：
+  - 一级 **计时子球**：控制面板… / 正计时：冒出/收回 / 正计时：开始 / 正计时：归零 /
+    倒计时：冒出/收回 / 倒计时：开始 / 倒计时：归零 / 倒计时：全屏专注
+  - 二级 **倒计时设置**：快捷 1·3·5·10·15·25·30·45 分钟 / 显示形态… / 常规设置…
+  - 界面上的"自检…"入口已移除；冒出与收回合并为同一项。
+- **倒计时"冒出"只显示、不自动计时**：等用户单击子球或用「倒计时：开始」才开始；记忆位置若在屏幕外会被夹回屏内。
+- **就绪状态也能进全屏番茄钟**：不自动开始，由顶部/底部交互决定何时计时。
+- **番茄钟顶部标题**：加粗黑色大字（浅色底衬保证可读），点击即可编辑、随打随存（写入 `data/countdown_plugin.properties` 的 `focusTitle`）。
+- **左键**单击悬浮球 = 正计时子球冒出/收回（显示即开始、收起即暂停）；宿主双击抽取、拖动移动保持原样。
+- **倒计时不使用左键**：左键单击/双击倒计时子球无反应（仅可拖动）；一切命令走右键菜单。
+- **两个子球同时显示时自动分列、互不重叠**；正计时冒出/收回时倒计时会重新排布。
+- **全屏番茄钟底部两个带矢量图标的按钮**：暂停/继续（暂停条 ⇄ 播放三角）、复原（回转箭头 → 回到上次设定起点并重新开始）；空格/R/ESC 同效。
+- 倒计时到时：读数停止、切"到时色"，按设置播放**自定义提醒音频**（未设置/不可用则系统提示音兜底）。
+- 日志：`PLUGIN_LOADED`/`PLUGIN_UNLOADED`；插件动作 `TB_CONFIG`/`TB_DOWN_*`/`TB_PICK`/`TB_HOST_EVENT`；
+  兼容旧码 `TIMER_*`（正计时沿用）；异常统一 `PLUGIN_LOAD_ERROR`。
+
+## 验收
+
+1. `powershell -ExecutionPolicy Bypass -File tools\deploy-timerball.ps1` → 自检全绿、jar 复制到位、旧 jar 已移除；
+2. `jar tf plugins\TimerBall.jar` 无 `com/randomnamepicker/` 条目；
+3. `git diff --stat -- src/` 只含宿主"菜单分组 API"那 5 个文件（`PluginContext`/`PluginManager`/`MenuGroupSupport`(新)/`FloatingBall`/`NamePickerApp`/`Main`），
+   且 `src/` 内**不含任何插件业务字样**（`计时/倒计时/TimerBall/▸` 等命中数为 0）；
+4. 人工：重启宿主 → 按上面"预期效果"逐条验证，重点看**三级级联子菜单**、**点即冒出并倒计时**、
+   **两球不重叠**、**左键只正计时 / 倒计时只右键**、**全屏两个图标按钮**、**自定义音频到点响铃**。

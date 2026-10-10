@@ -44,6 +44,21 @@ public interface PluginContext {
     void addUiAction(UiZone zone, String title, ActionListener action);
 
     /**
+     * 在指定 UI 区域注册一个<b>带分组路径</b>的动作（宿主插件 API：菜单分组/级联子菜单的正式接口）。
+     * <p>
+     * {@code groupPath} 为空/null 时等价于 {@link #addUiAction(UiZone, String, ActionListener)}（平铺）；
+     * 非空时宿主渲染端按路径逐级创建（或复用）级联子菜单，例如
+     * {@code new String[]{"分组A", "子组B"}} → 分组A → 子组B → 命令。
+     * 路径段为 null/空白会被忽略；宿主只按该字段渲染，不需要（也不应）约定任何标题分隔符。
+     * </p>
+     * <p>
+     * 失败语义与 {@link #addUiAction} 一致：zone 为 null 抛 {@link IllegalArgumentException}
+     * （宿主整 jar 拒载，原因码 NULL_ZONE）；title 空白或 action 为 null 时忽略。
+     * </p>
+     */
+    void addGroupedUiAction(UiZone zone, String[] groupPath, String title, ActionListener action);
+
+    /**
      * 订阅宿主事件（宿主插件生态一期）。回调在 <b>EDT</b> 逐监听器防御派发；订阅随插件卸载 /
      * 整 jar 拒载回滚 / onLoad 抛异常自动清理（归属键 = jar 文件名 + 实现类全名），
      * 插件仍应在 onUnload 显式退订（双保险）。事件类型与语义见 {@link HostEvent}。
@@ -73,14 +88,34 @@ public interface PluginContext {
         addUiAction(UiZone.MAIN_MENU, title, action);
     }
 
+    /** 主窗“插件”菜单：带分组路径添加一项（宿主建级联子菜单；groupPath 空则平铺）。 */
+    default void addMainMenuAction(String[] groupPath, String title, ActionListener action) {
+        addGroupedUiAction(UiZone.MAIN_MENU, groupPath, title, action);
+    }
+
     /** 在系统托盘菜单添加一项（暂存，提交后生效；标题不判重）。等价 addUiAction(UiZone.TRAY_MENU, …)。 */
     default void addTrayMenuAction(String title, ActionListener action) {
         addUiAction(UiZone.TRAY_MENU, title, action);
     }
 
+    /** 托盘菜单：带分组路径添加一项（宿主建级联子菜单；groupPath 空则平铺）。 */
+    default void addTrayMenuAction(String[] groupPath, String title, ActionListener action) {
+        addGroupedUiAction(UiZone.TRAY_MENU, groupPath, title, action);
+    }
+
     /** 在悬浮球右键菜单添加一项（暂存，提交后生效；标题不判重）。等价 addUiAction(UiZone.FLOATING_BALL_MENU, …)。 */
     default void addFloatingBallMenuAction(String title, ActionListener action) {
         addUiAction(UiZone.FLOATING_BALL_MENU, title, action);
+    }
+
+    /** 悬浮球右键菜单：带分组路径添加一项（宿主建级联子菜单；groupPath 空则平铺）。 */
+    default void addFloatingBallMenuAction(String[] groupPath, String title, ActionListener action) {
+        addGroupedUiAction(UiZone.FLOATING_BALL_MENU, groupPath, title, action);
+    }
+
+    /** 设置窗“插件”区：带分组路径添加一个按钮（一般不需要分组，保留一致性）。 */
+    default void addSettingsWindowAction(String[] groupPath, String title, ActionListener action) {
+        addGroupedUiAction(UiZone.SETTINGS_WINDOW, groupPath, title, action);
     }
 
     NameManager getNameManager();

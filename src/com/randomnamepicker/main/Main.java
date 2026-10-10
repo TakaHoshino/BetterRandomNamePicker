@@ -162,13 +162,8 @@ public class Main {
 
         // 插件托盘项（标题不判重；动作防御执行）
         List<PluginManager.MenuAction> pluginActions = PluginManager.getInstance().getTrayMenuActions();
-        for (PluginManager.MenuAction act : pluginActions) {
-            JMenuItem item = new JMenuItem(act.getTitle());
-            PluginManager.MenuAction captured = act;
-            item.addActionListener(e -> PluginManager.getInstance()
-                    .runMenuActionSafely(captured.getPluginName(), captured.getAction(), e));
-            menu.add(item);
-        }
+        // 插件项：按 MenuAction.groupPath 渲染级联子菜单（宿主通用渲染器）
+        com.randomnamepicker.plugin.MenuGroupSupport.appendActions(menu, pluginActions);
         if (!pluginActions.isEmpty()) {
             menu.addSeparator();
         }

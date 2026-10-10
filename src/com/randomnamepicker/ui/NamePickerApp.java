@@ -12,6 +12,7 @@ import com.randomnamepicker.mode.ModeHost;
 import com.randomnamepicker.mode.ModeRegistry;
 import com.randomnamepicker.model.Scheme;
 import com.randomnamepicker.plugin.HostEvent;
+import com.randomnamepicker.plugin.MenuGroupSupport;
 import com.randomnamepicker.plugin.PluginManager;
 import com.randomnamepicker.plugin.UiZone;
 import com.randomnamepicker.theme.BackdropManager;
@@ -514,13 +515,8 @@ public class NamePickerApp extends JFrame implements ModeHost {
         pluginMenu.removeAll();
         List<PluginManager.MenuAction> actions = PluginManager.getInstance().getMainMenuActions();
         List<PluginManager.PluginInfo> infos = PluginManager.getInstance().getPluginInfos();
-        for (PluginManager.MenuAction act : actions) {
-            JMenuItem item = new JMenuItem(act.getTitle());
-            PluginManager.MenuAction captured = act;
-            item.addActionListener(e -> PluginManager.getInstance()
-                    .runMenuActionSafely(captured.getPluginName(), captured.getAction(), e));
-            pluginMenu.add(item);
-        }
+        // 插件项：按 MenuAction.groupPath 渲染级联子菜单（宿主通用渲染器）
+        MenuGroupSupport.appendActions(pluginMenu, actions);
         if (!infos.isEmpty()) {
             if (!actions.isEmpty()) {
                 pluginMenu.addSeparator();

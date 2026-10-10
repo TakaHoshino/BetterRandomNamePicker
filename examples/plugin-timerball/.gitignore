@@ -1,0 +1,4 @@
+# 编译产物与本地自检日志（不纳入版本控制；jar 由 tools\deploy-timerball.ps1 生成）
+build/
+log/
+TimerBall.jar

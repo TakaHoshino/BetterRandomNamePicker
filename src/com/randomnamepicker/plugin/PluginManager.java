@@ -93,16 +93,38 @@ public final class PluginManager {
         }
     }
 
-    /** 菜单项（title 不判重；pluginName 用于出错日志归属）。 */
+    /**
+     * 菜单项（title 不判重；pluginName 用于出错日志归属）。
+     * <p>
+     * {@code groupPath} 为宿主提供的<b>分组路径</b>：非空时，宿主在渲染该动作时按路径依次创建
+     * （或复用）级联子菜单，例如 {@code groupPath = new String[]{"分组A","子组B"}}
+     * → 分组A → 子组B → 命令。
+     * 空数组/全空字符串表示平铺（与旧行为一致）。宿主渲染端只按本字段拼菜单，不认识任何插件业务字样。
+     * </p>
+     */
     public static final class MenuAction {
         private final String title;
         private final String pluginName;
         private final ActionListener action;
+        private final List<String> groupPath;
 
         MenuAction(String title, String pluginName, ActionListener action) {
+            this(title, pluginName, action, null);
+        }
+
+        MenuAction(String title, String pluginName, ActionListener action, String[] groupPath) {
             this.title = title;
             this.pluginName = pluginName;
             this.action = action;
+            List<String> path = new ArrayList<>();
+            if (groupPath != null) {
+                for (String seg : groupPath) {
+                    if (seg != null && !seg.trim().isEmpty()) {
+                        path.add(seg.trim());
+                    }
+                }
+            }
+            this.groupPath = Collections.unmodifiableList(path);
         }
 
         public String getTitle() {
@@ -115,6 +137,11 @@ public final class PluginManager {
 
         public ActionListener getAction() {
             return action;
+        }
+
+        /** 分组路径只读视图（空 = 平铺）。 */
+        public List<String> getGroupPath() {
+            return groupPath;
         }
     }
 
@@ -271,16 +298,22 @@ public final class PluginManager {
 
         @Override
         public synchronized void addUiAction(UiZone zone, String title, ActionListener action) {
+            addGroupedUiAction(zone, null, title, action);
+        }
+
+        @Override
+        public synchronized void addGroupedUiAction(UiZone zone, String[] groupPath,
+                                                    String title, ActionListener action) {
             // D8 严格失败语义：zone 为 null = 插件缺陷 → 抛异常（宿主整 jar 拒载并记 PLUGIN_LOAD_ERROR）
             if (zone == null) {
                 throw new IllegalArgumentException("插件 " + plugin.getName()
-                        + " 调用 addUiAction 时 zone 为 null");
+                        + " 调用 addUiAction/addGroupedUiAction 时 zone 为 null");
             }
             if (title == null || title.trim().isEmpty() || action == null) {
                 return; // 与既有菜单注册一致：空 title/action 忽略
             }
             pendingActions.computeIfAbsent(zone, z -> new ArrayList<>())
-                    .add(new MenuAction(title, plugin.getName(), action));
+                    .add(new MenuAction(title, plugin.getName(), action, groupPath));
         }
 
         @Override

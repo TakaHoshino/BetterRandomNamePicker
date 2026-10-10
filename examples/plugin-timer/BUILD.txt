@@ -1,3 +1,5 @@
+# 【历史留档】本工程为合并前的「正计时子球」独立插件，已被 examples/plugin-timerball（TimerBall.jar，正计时+倒计时合并版）取代。
+
 # CountUpTimerBall（正计时子球插件）编译打包说明
 
 依据《正计时子球开发方案.md》实现；宿主 `src/` **零改动**，仅新增本插件源码与 jar。

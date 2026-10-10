@@ -1,0 +1,89 @@
+# 【历史留档】本工程为合并前的「倒计时插件」独立版本，已被 examples/plugin-timerball（TimerBall.jar，正计时+倒计时合并版）取代。
+
+# CountdownTimer（倒计时插件）编译打包说明
+
+宿主 `src/` **零改动**：本插件只新增自身源码与 jar，部署到程序运行目录的 `plugins/`，重启程序生效。
+
+## 源码文件（默认包，8 个 .java）
+
+| 文件 | 职责 |
+|---|---|
+| `CountdownPlugin.java` | 插件入口（`Plugin`）：注册设置窗按钮 + 三类菜单 + 快捷时长 + `onLoad` 注册/`invokeLater` 调度 + `onUnload` 清理 |
+| `CountdownController.java` | 控制器：官方几何 API + `BALL_*` 事件追踪宿主悬浮球、单击/双击/拖动判定、菜单动作、配置即时应用、宿主事件订阅 |
+| `CountdownSession.java` | 倒计时核心（状态机 + 时间戳计时防漂移 + 读秒/到时回调）；两种形态共用同一实例，读数同步 |
+| `CountdownBall.java` | 倒计时子球（自绘圆窗 + 剩余比例进度环；单击开始/暂停/继续、双击归零收起、右键快捷菜单、拖动记忆位置） |
+| `CountdownFocus.java` | 全屏专注（番茄钟）形态：独占全屏（失败回退全屏窗口）、大号读数、进度环、空格/R/ESC/双击交互 |
+| `CountdownConfig.java` | 配置模型：读写插件自持 `data/countdown_plugin.properties`；五态配色（含警戒色）、提醒音频、形态、尺寸、交互等 |
+| `CountdownAlert.java` | 提醒音频：自定义音频文件播放（WAV/AIFF/AU）+ 音量 + 重复次数 + 系统提示音兜底 + 后台线程不阻塞 EDT |
+| `CountdownSettingsDialog.java` | "倒计时设置"对话框：时长与预设、形态、子球外观、配色（含警戒色与阈值）、全屏外观、提醒音频、交互、恢复默认 |
+| `CountdownSelfTest.java` | 自检 harness（非插件类，不参与 jar 打包规范约束，仅本地验证用；也可选择打入 jar，不影响加载） |
+
+打包后 **jar 内禁止出现 `com/randomnamepicker/**` 的 .class 条目**（宿主强制检查，违规整 jar 拒载 `BUNDLED_HOST_CLASS`）。
+
+## 编译（JDK 22；以宿主 jar 作 API 类路径）
+
+在 `examples/plugin-countdown` 目录执行：
+
+```
+javac -encoding UTF-8 -cp ..\..\RandomNamePicker.jar -d build CountdownPlugin.java CountdownController.java CountdownSession.java CountdownBall.java CountdownFocus.java CountdownConfig.java CountdownAlert.java CountdownSettingsDialog.java
+```
+
+（工作区根目录没有 `out/` 时就用上面的宿主 jar 作类路径；若 `out/` 存在也可 `-cp ..\..\out`。
+`CountdownSelfTest.java` 只在自检时编译，不打入插件 jar，避免运行期多加载无关类。）
+
+## 打包
+
+```
+jar cfm CountdownTimer.jar Countdown.manifest -C build CountdownPlugin.class -C build CountdownController.class ... 
+```
+
+推荐直接用 `tools\deploy-countdown.bat`（一键：编译 → 打包 → 复制到 `plugins\`），或按如下方式打包
+（只放入插件运行所需的 7 个类的 .class，**不含 SelfTest**）：
+
+```
+jar cfm CountdownTimer.jar Countdown.manifest -C build CountdownPlugin.class -C build CountdownController.class -C build CountdownSession.class -C build CountdownBall.class -C build CountdownFocus.class -C build CountdownConfig.class -C build CountdownAlert.class -C build CountdownSettingsDialog.class -C build CountdownBall$Actions.class -C build CountdownFocus$Actions.class -C build CountdownController$SettingsOpener.class -C build CountdownConfig$DisplayMode.class -C build CountdownConfig$SizeMode.class -C build CountdownSession$State.class -C build CountdownSession$FinishListener.class -C build CountdownSession$LastSecondListener.class -C build CountdownBall$BallPanel.class -C build CountdownBall$1.class -C build CountdownFocus$RingPanel.class -C build CountdownFocus$1.class -C build CountdownFocus$2.class -C build CountdownFocus$3.class -C build CountdownController$1.class -C build CountdownSettingsDialog$1.class
+```
+
+`Countdown.manifest` 声明 `Api-Level-Min: 2`（插件使用宿主事件订阅/几何查询等 API 级别 2 能力）。
+
+## 安装 / 卸载
+
+- 安装：把 `CountdownTimer.jar` 复制到程序运行目录的 `plugins\`（与 `RandomNamePicker.jar`/`.exe` 同级），重启程序。
+- 卸载：删除该 jar 后重启（宿主机制：不做运行中热插拔）。插件私有数据 `data/countdown_plugin.properties`
+  与 `data/countdown/`（音频建议目录）不会被自动删除。
+
+## 自检
+
+```
+javac -encoding UTF-8 -cp "build;..\..\RandomNamePicker.jar" -d build CountdownSelfTest.java
+java -cp "..\..\RandomNamePicker.jar;build" CountdownSelfTest
+```
+
+（`CountdownSelfTest` 依赖插件自身的类，故 `-cp` 要同时含 `build` 与宿主 jar。）
+
+覆盖：配置默认值/往返/坏值回退、时长解析、会话状态机（开始-暂停-继续-归零-到时-读秒）、
+提醒音频兜底路径、jar 打包禁令与 Manifest 级别、两种形态窗口构建。退出码 0 = 全部通过。
+
+## 预期效果
+
+- 设置窗"插件"区出现 **"倒计时插件"** 按钮 → 打开"倒计时设置"：时长与预设、显示形态（子球/全屏专注/两者）、
+  子球尺寸与间距、**五态配色（就绪/运行/暂停/警戒/到时）+ 警戒阈值**、全屏专注外观（全屏方式/置顶/背景/字号/结果行）、
+  **提醒音频（选择/试听/格式校验/音量/重复次数/最后读秒/系统提示音兜底）**、交互（显示即开始、跟随悬浮球）、恢复默认。
+  任一项即时生效并写入 `data/countdown_plugin.properties`（重启保留）。
+- 主窗"插件"菜单 / 托盘菜单 / 悬浮球右键菜单：显示·收起、开始·暂停、归零、全屏专注、立即结束、设置…
+  以及 1/3/5/10/15/25/30/45 分钟快捷时长。
+- 打开宿主悬浮球后：**单击悬浮球**（非拖动/非双击）=子球冒出并按设置自动开始/继续；**再单击**=收起并暂停（保留读数）；
+  宿主双击抽取、拖动移动保持原样；子球跟随悬浮球移动（可在设置中关闭改为拖动记忆位置）。
+- 子球单击=开始/暂停/继续；双击=归零并收起；右键=快捷菜单（含快捷时长/切全屏/设置）。
+- 全屏专注：独占全屏深色大字 + 进度环；**空格**=暂停/继续、**R**=归零、**ESC 或双击**=收起；
+  可选在底部显示最近一次抽取结果（宿主 `PICK_FINISHED` 事件）。
+- 到时：读数停止、颜色切到"到时色"，按设置播放**自定义提醒音频**（未设置/不可用则系统提示音兜底）。
+- 日志：`PLUGIN_LOADED`/`PLUGIN_UNLOADED`；插件动作 `CD_START/CD_PAUSE/CD_RESUME/CD_RESET/CD_FINISH/
+  CD_SHOW/CD_HIDE/CD_PICK/CD_CONFIG/CD_ALERT/CD_ALERT_FAIL`；异常统一 `PLUGIN_LOAD_ERROR`。
+
+## 验收
+
+1. `java -cp "..\..\RandomNamePicker.jar;build" CountdownSelfTest` → 退出码 0；
+2. `jar tf CountdownTimer.jar` 无 `com/randomnamepicker/` 条目；
+3. 宿主零改动复核：`git status --short -- src/` 无输出；
+4. 人工：重启宿主 → 日志 `PLUGIN_LOADED`，按上面"预期效果"逐条点击验证（含自定义音频改为一个 WAV 后到点响铃）。
