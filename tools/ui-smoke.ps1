@@ -91,6 +91,6 @@ finally {
         Start-Sleep -Milliseconds 300
     }
     if (-not $process.HasExited) {
-        Stop-Process -Id $process.Id
+        Stop-Process -Id $process.Id -Force
     }
 }

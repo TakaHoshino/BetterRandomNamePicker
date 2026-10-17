@@ -72,7 +72,7 @@
 
             <Border Grid.Row="1"
                     Margin="0,12"
-                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                    Background="Transparent"
                     BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
                     BorderThickness="1"
                     CornerRadius="0">
