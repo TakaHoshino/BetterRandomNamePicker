@@ -10,8 +10,8 @@ $project = Join-Path $repo 'src\BetterRNP\BetterRNP.csproj'
 $version = [string]$projectXml.Project.PropertyGroup.Version
 $tag = "v$version"
 $artifacts = Join-Path $repo 'artifacts'
-$frameworkDir = Join-Path $artifacts 'framework-dependent'
-$selfContainedDir = Join-Path $artifacts 'self-contained'
+$frameworkDir = Join-Path $artifacts "framework-dependent_$tag"
+$selfContainedDir = Join-Path $artifacts "self-contained_$tag"
 
 New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
 foreach ($directory in @($frameworkDir, $selfContainedDir)) {
@@ -41,5 +41,12 @@ $selfContainedZip = Join-Path $artifacts "BetterRNP_${Runtime}_self-contained_$t
 Compress-Archive -Path (Join-Path $frameworkDir '*') -DestinationPath $frameworkZip -Force
 Compress-Archive -Path (Join-Path $selfContainedDir '*') -DestinationPath $selfContainedZip -Force
 
+$sdkDir = Join-Path $artifacts 'sdk'
+dotnet pack (Join-Path $repo 'src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj') -c $Configuration -o $sdkDir
+if ($LASTEXITCODE -ne 0) {
+    throw 'Plugin SDK pack failed.'
+}
+
 Write-Output "FRAMEWORK_ZIP $frameworkZip"
 Write-Output "SELF_CONTAINED_ZIP $selfContainedZip"
+Write-Output "PLUGIN_SDK $sdkDir"

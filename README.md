@@ -81,8 +81,9 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 生成：
 
 ```text
-artifacts\BetterRNP_win-x64_framework-dependent_v2.0.1.zip
-artifacts\BetterRNP_win-x64_self-contained_v2.0.1.zip
+artifacts\BetterRNP_win-x64_framework-dependent_v2.1.0.zip
+artifacts\BetterRNP_win-x64_self-contained_v2.1.0.zip
+artifacts\sdk\BetterRNP.PluginSdk.1.0.0.nupkg
 ```
 
 直接运行：
@@ -157,6 +158,32 @@ YourPlugin.dll
 - `context.RegisterMode(...)`：向抽取模式下拉框添加自定义模式。
 
 插件管理窗口会显示名称、标识、作者、来源、类型、启用状态，并支持切换启停。禁用后，插件命令和自定义模式会立即从主界面移除，状态保存在 `data/plugins.json`。插件 DLL 使用可卸载的 `AssemblyLoadContext` 加载，SDK 程序集复用主程序版本。
+
+插件项目引用 SDK 包后，只需在项目根目录放置 `plugin.json`，每次 `dotnet build` 都会自动：
+
+1. 将 `plugin.json` 复制到输出目录。
+2. 检查清单中的入口程序集。
+3. 打包输出目录中的插件程序集和依赖。
+4. 在输出目录生成 `<插件 id>.rnpp`。
+
+SDK 可通过项目引用使用：
+
+```xml
+<ProjectReference Include="path\to\BetterRNP.PluginSdk.csproj" />
+<Import Project="path\to\BetterRNP.PluginSdk\build\BetterRNP.PluginSdk.targets" />
+```
+
+也可构建本地 NuGet 包后引用：
+
+```bat
+dotnet pack src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj -c Release -o artifacts\sdk
+```
+
+```xml
+<PackageReference Include="BetterRNP.PluginSdk" Version="1.0.0" />
+```
+
+NuGet 包自动导入 `BetterRNP.PluginSdk.targets`，无需手工打包脚本。
 
 构建示例插件包：
 

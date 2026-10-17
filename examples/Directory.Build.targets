@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\src\BetterRNP.PluginSdk\build\BetterRNP.PluginSdk.targets" />
+</Project>

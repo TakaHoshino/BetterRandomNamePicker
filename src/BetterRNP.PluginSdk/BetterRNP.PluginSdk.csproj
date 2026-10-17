@@ -5,5 +5,22 @@
     <Nullable>enable</Nullable>
     <AssemblyName>BetterRNP.PluginSdk</AssemblyName>
     <RootNamespace>BetterRNP.PluginSdk</RootNamespace>
+    <Version>1.0.0</Version>
+    <PackageId>BetterRNP.PluginSdk</PackageId>
+    <Authors>BetterRNP</Authors>
+    <Description>SDK for building BetterRNP .rnpp plugins.</Description>
+    <PackageTags>BetterRNP;Plugin;WPF</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="build\BetterRNP.PluginSdk.targets"
+          Pack="true"
+          PackagePath="build\BetterRNP.PluginSdk.targets" />
+    <None Include="build\pack-rnpp.ps1.txt"
+          Pack="true"
+          PackagePath="build\pack-rnpp.ps1.txt" />
+    <None Include="README.md"
+          Pack="true"
+          PackagePath="README.md" />
+  </ItemGroup>
 </Project>

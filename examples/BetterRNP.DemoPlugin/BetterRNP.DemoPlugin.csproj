@@ -9,6 +9,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj" />
-    <None Update="plugin.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

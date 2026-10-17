@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    Automatically packages a plugin after build when plugin.json exists in the
+    plugin project root. Works both from a NuGet PackageReference and from a
+    direct ProjectReference when this targets file is imported explicitly.
+  -->
+  <Target Name="PackBetterRnpPlugin"
+          AfterTargets="Build"
+          Condition="'$(DesignTimeBuild)' != 'true' and Exists('$(MSBuildProjectDirectory)\plugin.json')">
+    <PropertyGroup>
+      <_BetterRnpPackScriptSource>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)pack-rnpp.ps1.txt'))</_BetterRnpPackScriptSource>
+      <_BetterRnpPackScript>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)pack-rnpp.ps1'))</_BetterRnpPackScript>
+    </PropertyGroup>
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\plugin.json"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(_BetterRnpPackScriptSource)"
+          DestinationFiles="$(_BetterRnpPackScript)"
+          SkipUnchangedFiles="true" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_BetterRnpPackScript)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -OutputDir &quot;$(TargetDir).&quot;" />
+  </Target>
+</Project>

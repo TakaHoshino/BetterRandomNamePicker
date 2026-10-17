@@ -1,0 +1,63 @@
+param(
+    [Parameter(Mandatory = $true)][string]$ProjectDir,
+    [Parameter(Mandatory = $true)][string]$OutputDir
+)
+
+$ErrorActionPreference = 'Stop'
+$output = (Resolve-Path -LiteralPath $OutputDir).Path
+$manifestPath = Join-Path $output 'plugin.json'
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+    throw "Plugin output is missing plugin.json: $manifestPath"
+}
+
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ([string]::IsNullOrWhiteSpace($manifest.id)) {
+    throw 'plugin.json is missing id.'
+}
+if ([string]::IsNullOrWhiteSpace($manifest.assembly)) {
+    throw 'plugin.json is missing assembly.'
+}
+
+$assemblyPath = Join-Path $output ([string]$manifest.assembly)
+if (-not (Test-Path -LiteralPath $assemblyPath)) {
+    throw "Plugin entry assembly is missing: $assemblyPath"
+}
+
+$safeId = [string]$manifest.id
+foreach ($invalid in [System.IO.Path]::GetInvalidFileNameChars()) {
+    $safeId = $safeId.Replace($invalid, '_')
+}
+$packagePath = Join-Path $output "$safeId.rnpp"
+if (Test-Path -LiteralPath $packagePath) {
+    Remove-Item -LiteralPath $packagePath -Force
+}
+
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open($packagePath, 'Create')
+try {
+    $outputRoot = $output.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    $excludedNames = @(
+        'BetterRNP.dll',
+        'BetterRNP.exe',
+        'BetterRNP.PluginSdk.dll',
+        'BetterRNP.PluginSdk.pdb'
+    )
+    Get-ChildItem -LiteralPath $output -File -Recurse |
+        Where-Object {
+            $_.Extension -notin @('.pdb', '.rnpp') -and
+            $_.Name -notin $excludedNames
+        } |
+        ForEach-Object {
+            $relative = $_.FullName.Substring($outputRoot.Length).Replace('\', '/')
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive,
+                $_.FullName,
+                $relative) | Out-Null
+        }
+}
+finally {
+    $archive.Dispose()
+}
+
+Write-Output "RNPP_CREATED $packagePath"
