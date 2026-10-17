@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>BetterRNP.Tests</AssemblyName>
+    <RootNamespace>BetterRNP.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BetterRNP\BetterRNP.csproj" />
+    <ProjectReference Include="..\..\src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\examples\BetterRNP.DemoPlugin\BetterRNP.DemoPlugin.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,129 @@
+<Window x:Class="BetterRNP.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BetterRNP"
+        Width="820"
+        Height="660"
+        MinWidth="680"
+        MinHeight="540"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Menu Grid.Row="0" Padding="4,2">
+            <MenuItem x:Name="PluginsMenu" Header="插件" />
+            <MenuItem Header="主题">
+                <MenuItem x:Name="ThemeEnabledItem"
+                          Header="启用照片背景"
+                          IsCheckable="True"
+                          Click="ThemeEnabled_Click" />
+                <Separator />
+                <MenuItem Header="背景主题设置…" Click="ThemeSettings_Click" />
+            </MenuItem>
+            <MenuItem Header="帮助">
+                <MenuItem Header="关于 BetterRNP" Click="About_Click" />
+            </MenuItem>
+        </Menu>
+
+        <Grid Grid.Row="1" Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="预设方案"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"
+                               Foreground="{StaticResource MutedBrush}" />
+                    <ComboBox x:Name="SchemeCombo"
+                              Grid.Column="1"
+                              DisplayMemberPath="DisplayName"
+                              SelectionChanged="SchemeCombo_SelectionChanged" />
+                    <TextBlock Grid.Column="2"
+                               Text="抽取模式"
+                               VerticalAlignment="Center"
+                               Margin="20,0,8,0"
+                               Foreground="{StaticResource MutedBrush}" />
+                    <ComboBox x:Name="ModeCombo"
+                              Grid.Column="3"
+                              SelectionChanged="ModeCombo_SelectionChanged" />
+                    <Button Grid.Column="4"
+                            Content="设置"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Settings_Click" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Margin="0,12"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1"
+                    CornerRadius="0">
+                <TextBlock x:Name="DisplayText"
+                           Text="请选择方案和模式后开始抽取"
+                           FontSize="38"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="30"
+                           Foreground="{StaticResource InkBrush}" />
+            </Border>
+
+            <Grid Grid.Row="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <UniformGrid Grid.Row="0" Columns="3" Rows="1">
+                    <Button x:Name="PickButton"
+                            Content="开始抽取"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="Pick_Click" />
+                    <Button Content="配置名单"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Names_Click" />
+                    <Button x:Name="FloatingButton"
+                            Content="悬浮球"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Floating_Click" />
+                </UniformGrid>
+                <Grid Grid.Row="1" Margin="0,2,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="ModeButton1"
+                            Grid.Column="0"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="ModeButton1_Click" />
+                    <Button Content="方案管理"
+                            Grid.Column="1"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Schemes_Click" />
+                    <Button x:Name="ModeButton2"
+                            Grid.Column="2"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="ModeButton2_Click" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

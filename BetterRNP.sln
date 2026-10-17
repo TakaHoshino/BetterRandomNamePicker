@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP", "src\BetterRNP\BetterRNP.csproj", "{2A74845A-C5B8-43DE-B42E-0EF7C6FF8D81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.Tests", "tests\BetterRNP.Tests\BetterRNP.Tests.csproj", "{1AD7F168-D3BD-46E5-96F4-52213D6C047C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.PluginSdk", "src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj", "{E7A02AD6-D38A-42CA-9C06-AC3786832B37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.DemoPlugin", "examples\BetterRNP.DemoPlugin\BetterRNP.DemoPlugin.csproj", "{7AE52BB2-53CF-40D5-8B7F-BB5F9CC8B937}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2A74845A-C5B8-43DE-B42E-0EF7C6FF8D81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A74845A-C5B8-43DE-B42E-0EF7C6FF8D81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A74845A-C5B8-43DE-B42E-0EF7C6FF8D81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A74845A-C5B8-43DE-B42E-0EF7C6FF8D81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AD7F168-D3BD-46E5-96F4-52213D6C047C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AD7F168-D3BD-46E5-96F4-52213D6C047C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AD7F168-D3BD-46E5-96F4-52213D6C047C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AD7F168-D3BD-46E5-96F4-52213D6C047C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7A02AD6-D38A-42CA-9C06-AC3786832B37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7A02AD6-D38A-42CA-9C06-AC3786832B37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7A02AD6-D38A-42CA-9C06-AC3786832B37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7A02AD6-D38A-42CA-9C06-AC3786832B37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AE52BB2-53CF-40D5-8B7F-BB5F9CC8B937}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AE52BB2-53CF-40D5-8B7F-BB5F9CC8B937}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AE52BB2-53CF-40D5-8B7F-BB5F9CC8B937}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AE52BB2-53CF-40D5-8B7F-BB5F9CC8B937}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

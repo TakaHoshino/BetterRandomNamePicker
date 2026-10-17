@@ -1,0 +1,11 @@
+{
+  "id": "com.betterrnp.demo",
+  "name": "BetterRNP 示例插件",
+  "version": "1.0.0",
+  "author": "BetterRNP",
+  "type": "mixed",
+  "assembly": "BetterRNP.DemoPlugin.dll",
+  "entryType": "BetterRNP.DemoPlugin.DemoPlugin",
+  "apiVersion": "1.0",
+  "description": "演示插件命令与自定义抽取模式。"
+}
