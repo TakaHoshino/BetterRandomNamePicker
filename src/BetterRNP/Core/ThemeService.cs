@@ -10,12 +10,48 @@ public enum BackdropMode
     Fill,
     Fit,
     Stretch,
-    Center
+    Center,
+    Crop
 }
 
-public sealed record ThemeImage(string Id, string Path, string DisplayName);
+public sealed class ThemeImage
+{
+    public ThemeImage(string id, string path, string displayName)
+    {
+        Id = id;
+        Path = path;
+        DisplayName = displayName;
+        Preview = LoadPreview(path);
+    }
 
-public sealed record ThemeStyle(string ImagePath, BackdropMode Mode, int MaskAlpha);
+    public string Id { get; }
+    public string Path { get; }
+    public string DisplayName { get; }
+    public BitmapImage? Preview { get; }
+    public bool HasPreview => Preview is not null;
+
+    private static BitmapImage? LoadPreview(string path)
+    {
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            bitmap.DecodePixelWidth = 180;
+            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+
+public sealed record ThemeStyle(string ImagePath, BackdropMode Mode, int MaskAlpha, Rect Crop);
 
 public sealed class ThemeService
 {
@@ -92,6 +128,7 @@ public sealed class ThemeService
     public string GlobalImageId => _properties.Get("g.image", string.Empty) ?? string.Empty;
 
     public BackdropMode GlobalMode => ParseMode(_properties.Get("g.mode"));
+    public Rect GlobalCrop => ParseCrop(_properties.Get("g.crop"));
 
     public IReadOnlyList<ThemeImage> ListImages()
     {
@@ -147,12 +184,14 @@ public sealed class ThemeService
         if (GlobalImageId == imageId)
         {
             _properties.Set("g.image", null);
+            _properties.Set("g.crop", null);
         }
         foreach (var category in CategoryIds)
         {
             if (GetCategoryImageId(category) == imageId)
             {
                 _properties.Set(CategoryKey(category, "image"), null);
+                _properties.Set(CategoryKey(category, "crop"), null);
             }
         }
         _properties.Set("name." + imageId, null);
@@ -173,12 +212,26 @@ public sealed class ThemeService
         SaveAndApply();
     }
 
+    public void SetGlobalCrop(Rect crop)
+    {
+        _properties.Set("g.crop", CropToString(crop));
+        SaveAndApply();
+    }
+
     public string? GetCategoryImageId(string category)
         => _properties.Get(CategoryKey(category, "image"));
 
     public BackdropMode GetCategoryMode(string category)
         => ParseMode(_properties.Get(CategoryKey(category, "mode")) ?? string.Empty) is var mode
            && _properties.Contains(CategoryKey(category, "mode")) ? mode : GlobalMode;
+
+    public Rect GetCategoryCrop(string category)
+    {
+        var key = CategoryKey(category, "crop");
+        return _properties.Contains(key)
+            ? ParseCrop(_properties.Get(key))
+            : GlobalCrop;
+    }
 
     public void SetCategoryImage(string category, string? imageId)
     {
@@ -193,10 +246,17 @@ public sealed class ThemeService
         SaveAndApply();
     }
 
+    public void SetCategoryCrop(string category, Rect crop)
+    {
+        _properties.Set(CategoryKey(category, "crop"), CropToString(crop));
+        SaveAndApply();
+    }
+
     public void ClearCategory(string category)
     {
         _properties.Set(CategoryKey(category, "image"), null);
         _properties.Set(CategoryKey(category, "mode"), null);
+        _properties.Set(CategoryKey(category, "crop"), null);
         SaveAndApply();
     }
 
@@ -293,7 +353,7 @@ public sealed class ThemeService
         {
             return null;
         }
-        return new ThemeStyle(path, GetCategoryMode(category), MaskAlpha);
+        return new ThemeStyle(path, GetCategoryMode(category), MaskAlpha, GetCategoryCrop(category));
     }
 
     private void Apply(Attachment attachment)
@@ -316,7 +376,19 @@ public sealed class ThemeService
             bitmap.UriSource = new Uri(style.ImagePath, UriKind.Absolute);
             bitmap.EndInit();
             bitmap.Freeze();
-            attachment.Image.Source = bitmap;
+            ImageSource source = bitmap;
+            if (style.Mode == BackdropMode.Crop)
+            {
+                var crop = NormalizeCrop(style.Crop);
+                var x = Math.Clamp((int)Math.Round(crop.X * bitmap.PixelWidth), 0, bitmap.PixelWidth - 1);
+                var y = Math.Clamp((int)Math.Round(crop.Y * bitmap.PixelHeight), 0, bitmap.PixelHeight - 1);
+                var width = Math.Clamp((int)Math.Round(crop.Width * bitmap.PixelWidth), 1, bitmap.PixelWidth - x);
+                var height = Math.Clamp((int)Math.Round(crop.Height * bitmap.PixelHeight), 1, bitmap.PixelHeight - y);
+                var cropped = new CroppedBitmap(bitmap, new Int32Rect(x, y, width, height));
+                cropped.Freeze();
+                source = cropped;
+            }
+            attachment.Image.Source = source;
             attachment.Image.Stretch = style.Mode switch
             {
                 BackdropMode.Fit => Stretch.Uniform,
@@ -369,7 +441,8 @@ public sealed class ThemeService
                 .SelectMany(category => new[]
                 {
                     CategoryKey(category, "image"),
-                    CategoryKey(category, "mode")
+                    CategoryKey(category, "mode"),
+                    CategoryKey(category, "crop")
                 });
             _properties.WriteWithSections(
                 _paths.ThemeConfigFile,
@@ -381,7 +454,7 @@ public sealed class ThemeService
                 },
                 new (string, IEnumerable<string>)[]
                 {
-                    ("总开关与全局背景", new[] { "enabled", "mask", "g.image", "g.mode" }),
+                    ("总开关与全局背景", new[] { "enabled", "mask", "g.image", "g.mode", "g.crop" }),
                     ("按窗口类别指定", categoryKeys)
                 });
         }
@@ -404,6 +477,47 @@ public sealed class ThemeService
 
     private static BackdropMode ParseMode(string? value)
         => Enum.TryParse<BackdropMode>(value, true, out var mode) ? mode : BackdropMode.Fill;
+
+    private static Rect ParseCrop(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return new Rect(0, 0, 1, 1);
+        }
+        var parts = value.Split(',');
+        if (parts.Length != 4
+            || !double.TryParse(parts[0], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var x)
+            || !double.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var y)
+            || !double.TryParse(parts[2], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var width)
+            || !double.TryParse(parts[3], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var height))
+        {
+            return new Rect(0, 0, 1, 1);
+        }
+        return NormalizeCrop(new Rect(x, y, width, height));
+    }
+
+    private static Rect NormalizeCrop(Rect crop)
+    {
+        var x = Math.Clamp(crop.X, 0, 0.999);
+        var y = Math.Clamp(crop.Y, 0, 0.999);
+        var width = Math.Clamp(crop.Width, 0.001, 1 - x);
+        var height = Math.Clamp(crop.Height, 0.001, 1 - y);
+        return new Rect(x, y, width, height);
+    }
+
+    private static string CropToString(Rect crop)
+    {
+        var normalized = NormalizeCrop(crop);
+        return string.Join(",",
+            normalized.X.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+            normalized.Y.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+            normalized.Width.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+            normalized.Height.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture));
+    }
 
     private static int ParseInt(string? value, int fallback)
         => int.TryParse(value, out var parsed) ? parsed : fallback;

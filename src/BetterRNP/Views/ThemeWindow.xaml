@@ -52,9 +52,66 @@
                                Margin="4,0,0,8" />
                     <ListBox x:Name="ImageList"
                              Grid.Row="1"
-                             DisplayMemberPath="DisplayName"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              SelectionChanged="ImageList_SelectionChanged"
-                             MouseDoubleClick="ImageList_MouseDoubleClick" />
+                             MouseDoubleClick="ImageList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="104" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="96"
+                                            Height="62"
+                                            Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+                                            BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                            BorderThickness="1">
+                                        <Grid>
+                                            <TextBlock Text="无预览"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="{x:Type TextBlock}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasPreview}" Value="False">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <Image Source="{Binding Preview}"
+                                                   Stretch="Uniform"
+                                                   Margin="2"
+                                                   ToolTip="{Binding Path}">
+                                                <Image.Style>
+                                                    <Style TargetType="{x:Type Image}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasPreview}" Value="False">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Image.Style>
+                                            </Image>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayName}"
+                                               VerticalAlignment="Center"
+                                               Margin="8,0,4,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
             </Border>
 
@@ -71,6 +128,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -91,6 +149,12 @@
                                       Grid.Row="1"
                                       Grid.Column="1"
                                       SelectionChanged="GlobalMode_SelectionChanged" />
+                            <Button Grid.Row="1"
+                                    Grid.Column="2"
+                                    Content="裁切…"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Margin="8,3,0,3"
+                                    Click="GlobalCrop_Click" />
                             <TextBlock Grid.Row="2"
                                        Text="遮罩"
                                        VerticalAlignment="Center"
@@ -132,8 +196,19 @@
                                 <TextBlock Text="适配模式"
                                            Foreground="{StaticResource MutedBrush}"
                                            Margin="0,8,0,0" />
-                                <ComboBox x:Name="CategoryModeCombo"
-                                          SelectionChanged="CategoryMode_SelectionChanged" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="CategoryModeCombo"
+                                              SelectionChanged="CategoryMode_SelectionChanged" />
+                                    <Button Grid.Column="1"
+                                            Content="裁切…"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="8,3,0,3"
+                                            Click="CategoryCrop_Click" />
+                                </Grid>
                                 <Button Content="清除该类别设置"
                                         Style="{StaticResource SecondaryButton}"
                                         HorizontalAlignment="Left"

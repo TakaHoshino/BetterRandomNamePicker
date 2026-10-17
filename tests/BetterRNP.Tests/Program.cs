@@ -192,6 +192,28 @@ internal static class Program
         Check("update settings persist",
             !updateSettings.CheckOnStartup && updateSettings.Source == UpdateSource.GhProxy);
 
+        var pngPath = Path.Combine(root, "theme-preview.png");
+        File.WriteAllBytes(pngPath, Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+        var imageId = services.Theme.ImportImage(pngPath);
+        var themeImage = services.Theme.ListImages().First(image => image.Id == imageId);
+        Check("theme image library exposes thumbnail preview", themeImage.HasPreview);
+        services.Theme.SetGlobalImage(imageId);
+        services.Theme.SetGlobalCrop(new Rect(0.1, 0.2, 0.5, 0.4));
+        services.Theme.SetGlobalMode(BackdropMode.Crop);
+        services.Theme.IsEnabled = true;
+        var cropStyle = services.Theme.ResolveStyle(ThemeService.CategoryMain);
+        Check("theme crop persists and resolves",
+            cropStyle is { Mode: BackdropMode.Crop }
+            && Math.Abs(cropStyle.Crop.X - 0.1) < 0.001
+            && Math.Abs(cropStyle.Crop.Y - 0.2) < 0.001
+            && Math.Abs(cropStyle.Crop.Width - 0.5) < 0.001
+            && Math.Abs(cropStyle.Crop.Height - 0.4) < 0.001);
+        services.Theme.SetCategoryCrop(ThemeService.CategoryConfig, new Rect(0.2, 0.2, 0.6, 0.6));
+        Check("category crop resolves independently",
+            Math.Abs(services.Theme.GetCategoryCrop(ThemeService.CategoryConfig).Width - 0.6) < 0.001);
+        services.Theme.IsEnabled = false;
+
         var defaultScheme = new Scheme(Scheme.BuiltInDefaultName, Scheme.NameListType, true);
         var nameMode = new NameListMode(services, () => defaultScheme);
         var namesNow = services.Names.LoadNames(defaultScheme.Name);
@@ -276,6 +298,24 @@ internal static class Program
             catch (Exception ex)
             {
                 Fail($"window constructs: {window.GetType().Name} ({ex.GetType().Name}: {ex.Message})");
+            }
+        }
+
+        var cropSource = services.Theme.ListImages().FirstOrDefault();
+        if (cropSource is not null)
+        {
+            var cropWindow = new CropImageWindow(cropSource.Path, new Rect(0.1, 0.1, 0.5, 0.5));
+            try
+            {
+                cropWindow.Show();
+                cropWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                Check("crop window constructs with normalized selection",
+                    Math.Abs(cropWindow.SelectedCrop.Width - 0.5) < 0.001);
+                cropWindow.Close();
+            }
+            catch (Exception ex)
+            {
+                Fail($"crop window constructs ({ex.GetType().Name}: {ex.Message})");
             }
         }
         application.Shutdown();

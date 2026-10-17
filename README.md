@@ -21,7 +21,7 @@ BetterRNP 是一个使用 **.NET 8 / C# / WPF** 重写的课堂与活动随机�
 - 插件扩展：插件可向“插件”菜单添加命令，也可注册自定义抽取模式。
 - 检查更新：基于 GitHub Releases，启动时可自动检查，也可在设置或帮助菜单手动检查；支持官方源与 gh-proxy 镜像源。
 - 在线更新：自动检测当前安装是自包含版还是框架依赖版，默认选择对应更新包，也可手动切换；下载完成后覆盖重启。
-- 背景主题：导入本地图片、全局图片、按窗口类别指定、适配方式和遮罩。
+- 背景主题：图库缩略图预览、全局/按窗口类别指定、适配方式、遮罩与拖拽自由裁切。
 - 开机自启：写入当前用户的 Windows `Run` 注册表项。
 - 操作日志：写入 `log/Modifylog.txt`，可从设置窗口导出。
 
@@ -81,8 +81,8 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 生成：
 
 ```text
-artifacts\BetterRNP_win-x64_framework-dependent_v2.0.0.zip
-artifacts\BetterRNP_win-x64_self-contained_v2.0.0.zip
+artifacts\BetterRNP_win-x64_framework-dependent_v2.0.1.zip
+artifacts\BetterRNP_win-x64_self-contained_v2.0.1.zip
 ```
 
 直接运行：

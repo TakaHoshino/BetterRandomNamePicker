@@ -28,7 +28,8 @@ public partial class ThemeWindow : Window
         new(BackdropMode.Fill, "填充（裁切填满）"),
         new(BackdropMode.Fit, "适应（完整显示）"),
         new(BackdropMode.Stretch, "拉伸"),
-        new(BackdropMode.Center, "居中")
+        new(BackdropMode.Center, "居中"),
+        new(BackdropMode.Crop, "自由裁切")
     };
 
     private readonly AppServices _services;
@@ -207,6 +208,29 @@ public partial class ThemeWindow : Window
         }
     }
 
+    private void GlobalCrop_Click(object sender, RoutedEventArgs e)
+    {
+        var image = _images.FirstOrDefault(item => item.Id == _services.Theme.GlobalImageId);
+        if (image is null)
+        {
+            MessageBox.Show(this, "请先为全局背景选择图片。", "裁切",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new CropImageWindow(image.Path, _services.Theme.GlobalCrop)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        _services.Theme.SetGlobalCrop(dialog.SelectedCrop);
+        _services.Theme.SetGlobalMode(BackdropMode.Crop);
+        RefreshImages((ImageList.SelectedItem as ThemeImage)?.Id);
+    }
+
     private void MaskSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_syncing)
@@ -243,6 +267,37 @@ public partial class ThemeWindow : Window
         {
             _services.Theme.SetCategoryMode(category.Id, choice.Mode);
         }
+    }
+
+    private void CategoryCrop_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedCategory is not { } category)
+        {
+            return;
+        }
+        var imageId = _services.Theme.GetCategoryImageId(category.Id)
+                      ?? _services.Theme.GlobalImageId;
+        var image = _images.FirstOrDefault(item => item.Id == imageId);
+        if (image is null)
+        {
+            MessageBox.Show(this, "请先为该类别或全局背景选择图片。", "裁切",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new CropImageWindow(
+            image.Path,
+            _services.Theme.GetCategoryCrop(category.Id))
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+        _services.Theme.SetCategoryCrop(category.Id, dialog.SelectedCrop);
+        _services.Theme.SetCategoryMode(category.Id, BackdropMode.Crop);
+        RefreshImages((ImageList.SelectedItem as ThemeImage)?.Id);
     }
 
     private void ClearCategory_Click(object sender, RoutedEventArgs e)
