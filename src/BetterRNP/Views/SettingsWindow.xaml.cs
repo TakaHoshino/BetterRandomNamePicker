@@ -8,6 +8,7 @@ public partial class SettingsWindow : Window
 {
     private readonly AppServices _services;
     private bool _loading;
+    private bool _checkingUpdate;
 
     public SettingsWindow(AppServices services)
     {
@@ -26,6 +27,14 @@ public partial class SettingsWindow : Window
             MinimizeToTrayCheck.IsChecked = _services.Config.MinimizeToTray;
             AutoShowBallCheck.IsChecked = _services.Config.AutoShowFloatingBall;
             ThemeEnabledCheck.IsChecked = _services.Theme.IsEnabled;
+            var updateSettings = _services.UpdateSettings.Load();
+            CheckOnStartupCheck.IsChecked = updateSettings.CheckOnStartup;
+            OfficialSourceRadio.IsChecked = updateSettings.Source == UpdateSource.Official;
+            ProxySourceRadio.IsChecked = updateSettings.Source == UpdateSource.GhProxy;
+            InstallTypeText.Text = UpdateService.DetectCurrentInstallationKind()
+                == UpdateAssetKind.SelfContained
+                ? "当前安装类型：自包含版"
+                : "当前安装类型：框架依赖版";
 
             var radius = _services.Config.FloatingBallRadius;
             RadiusSlider.Value = Math.Clamp(radius, (int)RadiusSlider.Minimum, (int)RadiusSlider.Maximum);
@@ -124,6 +133,58 @@ public partial class SettingsWindow : Window
         if (!_loading)
         {
             _services.Theme.IsEnabled = ThemeEnabledCheck.IsChecked == true;
+        }
+    }
+
+    private void UpdateSetting_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_loading)
+        {
+            PersistUpdateSettings();
+        }
+    }
+
+    private void PersistUpdateSettings()
+    {
+        _services.UpdateSettings.Save(new UpdateSettings
+        {
+            CheckOnStartup = CheckOnStartupCheck.IsChecked == true,
+            Source = ProxySourceRadio.IsChecked == true
+                ? UpdateSource.GhProxy
+                : UpdateSource.Official
+        });
+    }
+
+    private async void CheckNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_checkingUpdate)
+        {
+            return;
+        }
+        _checkingUpdate = true;
+        CheckNowButton.IsEnabled = false;
+        UpdateStatusText.Text = "检查中…";
+        PersistUpdateSettings();
+        try
+        {
+            var result = await UpdatePresenter.CheckAsync(this, _services, true);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            UpdateStatusText.Text = result is null
+                ? "检查失败"
+                : result.UpdateAvailable
+                    ? $"发现新版本 {result.LatestTag}"
+                    : $"已是最新版本（{UpdateService.GetCurrentTag()}）";
+        }
+        finally
+        {
+            _checkingUpdate = false;
+            if (IsLoaded)
+            {
+                CheckNowButton.IsEnabled = true;
+            }
         }
     }
 

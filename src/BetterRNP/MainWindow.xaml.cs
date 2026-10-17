@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private bool _isPicking;
     private string? _pickSchemeName;
     private string? _pickModeName;
+    private bool _startupUpdateCheckStarted;
 
     public MainWindow(AppServices services)
     {
@@ -45,6 +46,11 @@ public partial class MainWindow : Window
         ModeCombo.SelectedIndex = 0;
         UpdateModeSpecificButtons();
         UpdateDisplayText();
+        if (!_startupUpdateCheckStarted)
+        {
+            _startupUpdateCheckStarted = true;
+            _ = CheckUpdateOnStartupAsync();
+        }
     }
 
     private void LoadSchemes(string? selectName = null)
@@ -275,6 +281,32 @@ public partial class MainWindow : Window
             "BetterRNP\n\n.NET 8 / C# / WPF 随机点名、随机数字与随机座位抽取工具。\n"
             + "托盘菜单使用 Windows 原生 Shell_NotifyIcon 与 TrackPopupMenu 实现。",
             "关于 BetterRNP", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        await UpdatePresenter.CheckAsync(this, _services, true);
+    }
+
+    private async Task CheckUpdateOnStartupAsync()
+    {
+        try
+        {
+            if (!_services.UpdateSettings.Load().CheckOnStartup)
+            {
+                return;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            if (!IsVisible)
+            {
+                return;
+            }
+            await UpdatePresenter.CheckAsync(this, _services, false);
+        }
+        catch (Exception ex)
+        {
+            _services.Log.Write($"启动时检查更新失败: {ex.Message}", "UPDATE_CHECK_ERROR");
+        }
     }
 
     private void OnPluginsChanged(object? sender, EventArgs e)

@@ -6,6 +6,7 @@
 *.suo
 *.cache
 publish/
+artifacts/
 
 # Runtime data and logs
 data/
@@ -16,7 +17,7 @@ plugins/
 *.log
 
 # Generated smoke-test output
-ui-smoke.png
+ui-smoke*.png
 
 # OS/editor files
 .DS_Store

@@ -17,6 +17,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
         Services = AppServices.Create();
+        Services.Log.Write(
+            UpdateService.DetectCurrentInstallationKind() == UpdateAssetKind.SelfContained
+                ? "自包含版"
+                : "框架依赖版",
+            "UPDATE_INSTALL_TYPE");
 
         if (Services.Config.AutoStart)
         {

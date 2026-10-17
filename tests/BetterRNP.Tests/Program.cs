@@ -139,6 +139,59 @@ internal static class Program
             && reloaded.Config.FloatingBallOpacity == 143
             && !reloaded.Config.MinimizeToTray);
 
+        const string releaseJson = """
+        {
+          "tag_name": "v2.0.1",
+          "html_url": "https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.0.1",
+          "body": "## BetterRNP v2.0.1\n\n### 更新内容\n- test",
+          "assets": [
+            {
+              "name": "BetterRNP_win-x64_self-contained_v2.0.1.zip",
+              "size": 104857600,
+              "browser_download_url": "https://github.com/TakaHoshino/BetterRandomNamePicker/releases/download/v2.0.1/BetterRNP_win-x64_self-contained_v2.0.1.zip"
+            },
+            {
+              "name": "BetterRNP_win-x64_framework-dependent_v2.0.1.zip",
+              "size": 20971520,
+              "browser_download_url": "https://github.com/TakaHoshino/BetterRandomNamePicker/releases/download/v2.0.1/BetterRNP_win-x64_framework-dependent_v2.0.1.zip"
+            }
+          ]
+        }
+        """;
+        var update = UpdateService.EvaluateReleaseJson(releaseJson, new Version(2, 0, 0));
+        Check("update checker detects newer release", update.UpdateAvailable);
+        Check("update checker parses latest tag", update.LatestTag == "v2.0.1");
+        Check("update checker finds both package assets",
+            update.SelfContainedAsset?.SizeBytes == 104857600
+            && update.FrameworkDependentAsset?.SizeBytes == 20971520);
+        Check("update checker keeps release notes",
+            update.ReleaseNotes.Contains("### 更新内容", StringComparison.Ordinal));
+        Check("update checker proxy URL",
+            services.Update.ResolveDownloadUri(update.SelfContainedAsset!, UpdateSource.GhProxy)
+                .AbsoluteUri.StartsWith(UpdateService.GhProxyPrefix, StringComparison.Ordinal));
+        Check("same release is not newer",
+            !UpdateService.EvaluateReleaseJson(releaseJson, new Version(2, 0, 1)).UpdateAvailable);
+        Check("detects framework-dependent installation",
+            UpdateService.DetectInstallationKind(
+                @"C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.0\System.Private.CoreLib.dll",
+                @"C:\Apps\BetterRNP") == UpdateAssetKind.FrameworkDependent);
+        Check("detects self-contained installation",
+            UpdateService.DetectInstallationKind(
+                @"C:\Apps\BetterRNP\System.Private.CoreLib.dll",
+                @"C:\Apps\BetterRNP") == UpdateAssetKind.SelfContained);
+        Check("single-file layout detects self-contained",
+            UpdateService.DetectInstallationKind(string.Empty, @"C:\Apps\BetterRNP")
+                == UpdateAssetKind.SelfContained);
+
+        services.UpdateSettings.Save(new UpdateSettings
+        {
+            CheckOnStartup = false,
+            Source = UpdateSource.GhProxy
+        });
+        var updateSettings = services.UpdateSettings.Load();
+        Check("update settings persist",
+            !updateSettings.CheckOnStartup && updateSettings.Source == UpdateSource.GhProxy);
+
         var defaultScheme = new Scheme(Scheme.BuiltInDefaultName, Scheme.NameListType, true);
         var nameMode = new NameListMode(services, () => defaultScheme);
         var namesNow = services.Names.LoadNames(defaultScheme.Name);
@@ -189,6 +242,14 @@ internal static class Program
         application.InitializeComponent();
         var services = AppServices.Create(root);
         using var pluginManager = new PluginManager(services);
+        var updatePrompt = UpdateService.EvaluateReleaseJson("""
+        {
+          "tag_name": "v2.0.1",
+          "html_url": "https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.0.1",
+          "body": "test",
+          "assets": []
+        }
+        """, new Version(2, 0, 0));
         var windows = new Window[]
         {
             new NameConfigWindow(services),
@@ -198,6 +259,7 @@ internal static class Program
             new SettingsWindow(services),
             new ThemeWindow(services),
             new PluginManagerWindow(pluginManager),
+            new UpdatePromptWindow(updatePrompt),
             new PasswordWindow(services, "密码验证", "请输入密码："),
             new ChangePasswordWindow(services)
         };

@@ -14,6 +14,8 @@ public sealed class AppServices
         Names = new NameService(Data, Log);
         Schemes = new SchemeService(paths, Data, Log);
         Theme = new ThemeService(paths, Log);
+        UpdateSettings = new UpdateSettingsService(paths);
+        Update = new UpdateService(Log);
     }
 
     public AppPaths Paths { get; }
@@ -25,6 +27,8 @@ public sealed class AppServices
     public NameService Names { get; }
     public SchemeService Schemes { get; }
     public ThemeService Theme { get; }
+    public UpdateSettingsService UpdateSettings { get; }
+    public UpdateService Update { get; }
 
     public static AppServices Create(string? root = null) => new(new AppPaths(root));
 }

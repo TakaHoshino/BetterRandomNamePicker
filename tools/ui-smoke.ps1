@@ -1,3 +1,8 @@
+param(
+    [string]$AppPath = '',
+    [string]$OutputName = 'ui-smoke.png'
+)
+
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $exe = Join-Path $repo 'src\BetterRNP\bin\Release\net8.0-windows\BetterRNP.exe'
@@ -30,7 +35,15 @@ public static class BetterRnpNative
 }
 "@
 
-$process = Start-Process -FilePath 'dotnet' -ArgumentList $dll -PassThru
+if ([string]::IsNullOrWhiteSpace($AppPath)) {
+    $process = Start-Process -FilePath 'dotnet' -ArgumentList $dll -PassThru
+}
+else {
+    if (-not (Test-Path -LiteralPath $AppPath)) {
+        throw "Application not found: $AppPath"
+    }
+    $process = Start-Process -FilePath $AppPath -PassThru
+}
 try {
     $window = [IntPtr]::Zero
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
@@ -65,7 +78,7 @@ try {
     finally {
         $graphics.ReleaseHdc($hdc)
     }
-    $output = Join-Path $repo 'ui-smoke.png'
+    $output = Join-Path $repo $OutputName
     $bitmap.Save($output, [System.Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose()
     $bitmap.Dispose()
