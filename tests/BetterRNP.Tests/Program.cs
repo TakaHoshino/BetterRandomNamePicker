@@ -5,6 +5,7 @@ using BetterRNP.Core;
 using BetterRNP.Models;
 using BetterRNP.Modes;
 using BetterRNP.Plugins;
+using BetterRNP.PluginSdk.Models;
 using BetterRNP.PluginSdk.Packaging;
 using BetterRNP.Views;
 
@@ -138,6 +139,18 @@ internal static class Program
             reloaded.Config.FloatingBallRadius == 12
             && reloaded.Config.FloatingBallOpacity == 143
             && !reloaded.Config.MinimizeToTray);
+
+        var mutexName = $"Local\\BetterRNP.Tests.{Guid.NewGuid():N}";
+        var eventName = $"Local\\BetterRNP.Tests.Show.{Guid.NewGuid():N}";
+        using var primaryInstance = new SingleInstanceGuard(mutexName, eventName);
+        using var secondaryInstance = new SingleInstanceGuard(mutexName, eventName);
+        using var activationSignal = new ManualResetEventSlim(false);
+        primaryInstance.StartListening(() => activationSignal.Set());
+        Check("single instance identifies primary process", primaryInstance.IsPrimary);
+        Check("single instance detects secondary process", !secondaryInstance.IsPrimary);
+        Check("secondary process signals primary",
+            secondaryInstance.SignalExisting()
+            && activationSignal.Wait(TimeSpan.FromSeconds(3)));
 
         const string releaseJson = """
         {
@@ -352,9 +365,22 @@ internal static class Program
 
         Check("rnpp manifest validation",
             RnpPackager.ReadManifest(packagePath) is { Success: true, Manifest.Id: "com.betterrnp.demo" });
-        var renamedFep = Path.ChangeExtension(packagePath, ".fep");
-        File.Copy(packagePath, renamedFep);
-        Check("fep extension is rejected", !RnpPackager.ReadManifest(renamedFep).Success);
+        var pickerManifestValidation = ManifestValidator.TryParse("""
+        {
+          "id": "com.example.picker",
+          "name": "Picker",
+          "type": "pickerMode",
+          "assembly": "Picker.dll",
+          "entryType": "Picker.Entry",
+          "apiVersion": "1.0"
+        }
+        """, out var pickerManifest);
+        Check("pickerMode manifest type is accepted",
+            pickerManifestValidation.IsValid && pickerManifest?.Type == PluginType.PickerMode);
+        var wrongExtensionPackage = Path.ChangeExtension(packagePath, ".zip");
+        File.Copy(packagePath, wrongExtensionPackage);
+        Check("wrong plugin extension is rejected",
+            !RnpPackager.ReadManifest(wrongExtensionPackage).Success);
 
         var services = AppServices.Create(root);
         using var plugins = new PluginManager(services);

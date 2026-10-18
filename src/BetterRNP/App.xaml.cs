@@ -6,6 +6,12 @@ namespace BetterRNP;
 
 public partial class App : Application
 {
+    private const string InstanceMutexName =
+        @"Local\BetterRNP.SingleInstance.8D56DF47D9514C0A8BF0A6475E0C711B";
+    private const string InstanceShowEventName =
+        @"Local\BetterRNP.SingleInstance.Show.8D56DF47D9514C0A8BF0A6475E0C711B";
+
+    private SingleInstanceGuard? _instanceGuard;
     private FloatingBallWindow? _floatingBall;
     private NativeTrayService? _tray;
 
@@ -16,6 +22,18 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _instanceGuard = new SingleInstanceGuard(InstanceMutexName, InstanceShowEventName);
+        if (!_instanceGuard.IsPrimary)
+        {
+            _instanceGuard.SignalExisting();
+            _instanceGuard.Dispose();
+            _instanceGuard = null;
+            Shutdown();
+            return;
+        }
+        _instanceGuard.StartListening(
+            () => Dispatcher.BeginInvoke(new Action(ShowMainWindow)));
+
         Services = AppServices.Create();
         Services.Log.Write(
             UpdateService.DetectCurrentInstallationKind() == UpdateAssetKind.SelfContained
@@ -47,6 +65,10 @@ public partial class App : Application
 
     public void ShowMainWindow()
     {
+        if (ShellWindow is null)
+        {
+            return;
+        }
         ShellWindow.Show();
         if (ShellWindow.WindowState == WindowState.Minimized)
         {
@@ -127,5 +149,12 @@ public partial class App : Application
         _tray = null;
         Services.Log.Write("程序退出", "APP_EXIT");
         Shutdown();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _instanceGuard?.Dispose();
+        _instanceGuard = null;
+        base.OnExit(e);
     }
 }

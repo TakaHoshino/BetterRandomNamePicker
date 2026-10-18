@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>BetterRNP Geometric Banner</title>
+  <style>
+    @font-face {
+      font-family: "Archivo Black Local";
+      src: url("fonts/ArchivoBlack-Regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    :root {
+      --ink: #2d2e2c;
+      --paper: #f5f6f2;
+      --green: #9cff00;
+      --green-deep: #6fd400;
+      --yellow: #f3ff57;
+      --cyan: #6fe5ef;
+      --line: rgba(45, 46, 44, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+    }
+    body {
+      font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .banner {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 16% 22%, #fff 0 17%, transparent 43%),
+        radial-gradient(circle at 72% 40%, rgba(255,255,255,.95) 0 24%, transparent 60%),
+        linear-gradient(120deg, #f8f9f6 0%, #eef0ed 52%, #f8f9f6 100%);
+    }
+
+    .noise {
+      position: absolute;
+      inset: 0;
+      opacity: .3;
+      background-image:
+        repeating-linear-gradient(90deg, rgba(40,45,40,.035) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(0deg, rgba(40,45,40,.018) 0 1px, transparent 1px 5px);
+    }
+
+    .frame-line {
+      position: absolute;
+      border: 1px solid rgba(45,46,44,.21);
+    }
+    .frame-a { left: 58px; top: 48px; width: 1804px; height: 984px; }
+    .frame-b { left: 105px; top: 98px; width: 1710px; height: 882px; opacity: .35; }
+
+    .frame-rule { position: absolute; background: var(--line); }
+    .rule-v { width: 1px; }
+    .rule-h { height: 1px; }
+    .r1 { left: 152px; top: 105px; height: 184px; }
+    .r2 { right: 168px; top: 104px; height: 216px; }
+    .r3 { left: 810px; top: 924px; width: 930px; }
+    .r4 { left: 116px; top: 843px; width: 525px; }
+
+    .corner-mark {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(45,46,44,.38);
+    }
+    .corner-mark::before {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border: 1px solid rgba(45,46,44,.45);
+      border-radius: 50%;
+      left: 11px;
+      top: 11px;
+    }
+    .cm1 { left: 92px; top: 118px; }
+    .cm2 { right: 132px; top: 205px; }
+    .cm3 { right: 250px; top: 905px; transform: rotate(45deg); }
+
+    .top-meta {
+      position: absolute;
+      left: 108px;
+      top: 62px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .16em;
+    }
+    .top-meta .chip {
+      padding: 7px 12px 6px;
+      background: var(--ink);
+      color: white;
+    }
+    .top-meta .sub {
+      color: #646863;
+      font-weight: 600;
+      letter-spacing: .22em;
+    }
+    .green-dot {
+      width: 11px;
+      height: 11px;
+      background: var(--green);
+      transform: rotate(45deg);
+    }
+
+    .right-meta {
+      position: absolute;
+      right: 92px;
+      top: 70px;
+      z-index: 20;
+      text-align: right;
+      font-size: 13px;
+      letter-spacing: .18em;
+      line-height: 1.8;
+      color: #72766f;
+      font-weight: 700;
+    }
+    .right-meta strong {
+      display: block;
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    .ghost-arc {
+      position: absolute;
+      border: 65px solid rgba(45,46,44,.055);
+      border-radius: 50%;
+    }
+    .arc-a { width: 640px; height: 640px; left: -135px; top: 240px; }
+    .arc-b { width: 355px; height: 355px; left: 222px; top: 411px; border-width: 48px; }
+
+    .main-title {
+      position: absolute;
+      left: 108px;
+      top: 172px;
+      z-index: 6;
+      width: 1040px;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+    .main-title .line {
+      display: block;
+      font-family: "Archivo Black Local", "Arial Black", sans-serif;
+      font-size: 214px;
+      line-height: .88;
+      letter-spacing: -8px;
+      white-space: nowrap;
+    }
+    .main-title .line.outline {
+      color: transparent;
+      -webkit-text-stroke: 3px var(--ink);
+    }
+    .main-title .line.two {
+      margin-top: -1px;
+      margin-left: -5px;
+    }
+    .main-title .accent-letter {
+      color: var(--green-deep);
+    }
+    .main-title .rnp-cut {
+      position: absolute;
+      width: 54px;
+      height: 42px;
+      background: var(--green);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      right: -5px;
+      top: 302px;
+      transform: rotate(9deg);
+    }
+    .title-rule {
+      position: absolute;
+      left: 124px;
+      top: 551px;
+      width: 755px;
+      height: 2px;
+      background: var(--ink);
+      opacity: .7;
+      transform: rotate(-.3deg);
+    }
+    .sub-title {
+      position: absolute;
+      left: 123px;
+      top: 566px;
+      font-size: 29px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      color: #555954;
+      z-index: 20;
+    }
+    .sub-title span { color: var(--green-deep); }
+
+    .feature-line {
+      position: absolute;
+      left: 126px;
+      top: 760px;
+      z-index: 22;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .07em;
+    }
+    .feature-line .item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 22px;
+    }
+    .feature-line .item:first-child { padding-left: 0; }
+    .feature-line .sep {
+      width: 1px;
+      height: 28px;
+      background: rgba(45,46,44,.27);
+    }
+    .feature-line b {
+      color: var(--green-deep);
+      font-size: 12px;
+    }
+
+    .micro-label {
+      position: absolute;
+      left: 126px;
+      top: 808px;
+      z-index: 22;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .23em;
+      color: #777b75;
+    }
+
+    .yellow-pill {
+      position: absolute;
+      left: 1010px;
+      top: 817px;
+      z-index: 30;
+      background: var(--yellow);
+      padding: 17px 34px 15px;
+      border-radius: 999px;
+      font-size: 33px;
+      font-weight: 900;
+      letter-spacing: .035em;
+      box-shadow: 0 15px 38px rgba(183,199,48,.2);
+      transform: rotate(-1deg);
+    }
+    .yellow-pill::before {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: var(--green);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      left: -44px;
+      top: 18px;
+    }
+
+    /* Right-side pure geometry composition */
+    .geo-stage {
+      position: absolute;
+      left: 890px;
+      top: 118px;
+      width: 860px;
+      height: 700px;
+      z-index: 5;
+    }
+
+    .triangle-field {
+      position: absolute;
+      left: 248px;
+      top: 86px;
+      width: 560px;
+      height: 392px;
+      opacity: .92;
+      clip-path: polygon(0 0, 100% 0, 100% 77%, 71% 100%, 0 79%);
+    }
+
+    .selection-ring {
+      position: absolute;
+      left: 278px;
+      top: 10px;
+      width: 414px;
+      height: 414px;
+      border-radius: 50%;
+      border: 48px solid var(--ink);
+      background: conic-gradient(
+        from -25deg,
+        transparent 0deg 92deg,
+        rgba(156,255,0,.94) 92deg 142deg,
+        transparent 142deg 360deg
+      );
+      box-shadow: 0 22px 45px rgba(45,46,44,.12);
+    }
+    .selection-ring::before {
+      content: "";
+      position: absolute;
+      inset: -74px;
+      border: 1px solid rgba(45,46,44,.34);
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        rgba(45,46,44,.65) 0deg .6deg,
+        transparent .6deg 12deg
+      );
+      -webkit-mask: radial-gradient(circle, transparent 0 67%, #000 67.3% 68%, transparent 68.3%);
+    }
+    .selection-ring::after {
+      content: "";
+      position: absolute;
+      inset: 54px;
+      border-radius: 50%;
+      background: rgba(250,251,248,.93);
+      border: 1px solid rgba(45,46,44,.25);
+      box-shadow: inset 0 0 0 27px rgba(45,46,44,.04);
+    }
+
+    .shuffle-badge {
+      position: absolute;
+      left: 405px;
+      top: 137px;
+      width: 160px;
+      height: 160px;
+      z-index: 4;
+      background: #0b9347;
+      border: 7px solid #f7f8f5;
+      box-shadow: 0 0 0 5px var(--ink);
+      transform: rotate(-1.5deg);
+      display: grid;
+      place-items: center;
+    }
+    .shuffle-badge svg {
+      width: 118px;
+      height: 118px;
+      overflow: visible;
+    }
+    .ring-cross-v, .ring-cross-h {
+      position: absolute;
+      background: rgba(45,46,44,.35);
+      z-index: 2;
+    }
+    .ring-cross-v { left: 484px; top: 72px; width: 1px; height: 290px; }
+    .ring-cross-h { left: 340px; top: 217px; width: 290px; height: 1px; }
+
+    .cyan-orb {
+      position: absolute;
+      left: 184px;
+      top: 12px;
+      width: 118px;
+      height: 118px;
+      border-radius: 50%;
+      background: var(--cyan);
+      border: 14px solid #baf6f8;
+      box-shadow: 0 0 0 12px rgba(111,229,239,.16);
+      display: grid;
+      place-items: center;
+    }
+    .cyan-orb::before {
+      content: "";
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: white;
+      border: 10px solid #8beef2;
+    }
+    .cyan-orb-small {
+      position: absolute;
+      left: 157px;
+      top: 91px;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(111,229,239,.35);
+      border: 11px solid var(--cyan);
+      opacity: .72;
+    }
+
+    .beam {
+      position: absolute;
+      height: 15px;
+      width: 1660px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(156,255,0,.2);
+      transform-origin: center;
+      z-index: 12;
+      opacity: .93;
+    }
+    .beam-a { left: -80px; top: 283px; transform: rotate(20deg); }
+    .beam-b { left: 25px; top: 307px; transform: rotate(20deg); height: 6px; opacity: .58; }
+    .beam-c { left: 417px; top: 239px; transform: rotate(-37deg); height: 9px; opacity: .8; }
+
+    .scatter {
+      position: absolute;
+      z-index: 16;
+    }
+    .scatter-a {
+      left: 176px; top: 328px; width: 42px; height: 36px;
+      background: var(--green); clip-path: polygon(0 0, 100% 100%, 0 100%);
+      transform: rotate(-13deg);
+    }
+    .scatter-b {
+      left: 736px; top: 334px; width: 34px; height: 34px;
+      background: var(--ink); transform: rotate(19deg);
+    }
+    .scatter-c {
+      left: 694px; top: 477px; width: 46px; height: 46px;
+      border: 7px solid var(--green-deep); border-radius: 50%;
+    }
+    .scatter-d {
+      left: 801px; top: 557px; width: 0; height: 0;
+      border-left: 25px solid transparent;
+      border-right: 25px solid transparent;
+      border-bottom: 42px solid var(--ink);
+      transform: rotate(21deg);
+    }
+    .scatter-e {
+      left: 213px; top: 480px; width: 55px; height: 9px;
+      background: var(--ink); transform: rotate(-27deg);
+    }
+    .scatter-f {
+      left: 788px; top: 230px; width: 22px; height: 22px;
+      background: var(--yellow); transform: rotate(45deg);
+    }
+
+    .outline-square {
+      position: absolute;
+      border: 1px solid rgba(45,46,44,.33);
+      background: rgba(255,255,255,.2);
+    }
+    .os1 { left: 134px; top: 146px; width: 154px; height: 154px; transform: rotate(21deg); }
+    .os2 { left: 665px; top: 450px; width: 126px; height: 126px; transform: rotate(-14deg); }
+    .os2::before {
+      content: "";
+      position: absolute;
+      inset: 24px;
+      border-radius: 50%;
+      border: 1px solid rgba(45,46,44,.35);
+    }
+
+    .triangle-outline {
+      position: absolute;
+      width: 210px;
+      height: 185px;
+      border: 2px solid rgba(45,46,44,.43);
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      background: transparent;
+    }
+    .to1 { left: 616px; top: 37px; transform: rotate(9deg); }
+    .to2 { left: 74px; top: 470px; width: 168px; height: 150px; transform: rotate(-19deg); }
+
+    .yellow-disc {
+      position: absolute;
+      left: 660px;
+      top: 158px;
+      width: 116px;
+      height: 116px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 16px 30px rgba(180,194,59,.25);
+    }
+    .yellow-disc::before {
+      content: "";
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border: 7px solid var(--ink);
+      border-radius: 50%;
+      left: 37px;
+      top: 37px;
+    }
+
+    .dot-matrix {
+      position: absolute;
+      left: 621px;
+      top: 480px;
+      width: 184px;
+      height: 148px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 13px;
+    }
+    .dot-matrix i {
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      border: 1px solid rgba(45,46,44,.55);
+    }
+    .dot-matrix i:nth-child(3n) { background: var(--green); border-color: var(--green); }
+    .dot-matrix i:nth-child(7n) { background: var(--yellow); border-color: var(--yellow); }
+
+    .bar-stack {
+      position: absolute;
+      left: 642px;
+      top: 15px;
+      width: 152px;
+      display: grid;
+      gap: 7px;
+    }
+    .bar-stack i {
+      display: block;
+      height: 9px;
+      background: var(--ink);
+      opacity: .6;
+      transform-origin: left center;
+    }
+    .bar-stack i:nth-child(2) { width: 82%; }
+    .bar-stack i:nth-child(3) { width: 64%; background: var(--green-deep); opacity: 1; }
+    .bar-stack i:nth-child(4) { width: 92%; }
+    .bar-stack i:nth-child(5) { width: 54%; }
+
+    .orbit-line {
+      position: absolute;
+      border: 1px solid rgba(45,46,44,.28);
+      border-radius: 50%;
+    }
+    .ol1 { left: 400px; top: 235px; width: 660px; height: 400px; transform: rotate(-13deg); }
+    .ol2 { left: 475px; top: 95px; width: 510px; height: 470px; border-color: rgba(111,212,0,.38); }
+
+    .color-reg {
+      position: absolute;
+      height: 9px;
+      background: repeating-linear-gradient(
+        90deg,
+        #f09b9b 0 3px,
+        #fbdf7b 3px 6px,
+        #89e3a1 6px 9px,
+        #7bc6ee 9px 12px,
+        #272727 12px 13px
+      );
+      opacity: .65;
+      z-index: 13;
+    }
+    .reg-a { left: 282px; top: 226px; width: 520px; }
+    .reg-b { left: 1468px; top: 656px; width: 255px; }
+    .reg-c { left: 124px; top: 866px; width: 270px; height: 6px; }
+
+    .scan-block {
+      position: absolute;
+      z-index: 3;
+      opacity: .23;
+      background: repeating-linear-gradient(0deg, rgba(45,46,44,.19) 0 1px, transparent 1px 4px);
+    }
+    .scan-a { left: 310px; top: 250px; width: 590px; height: 185px; }
+
+    .vertical-label {
+      position: absolute;
+      right: 58px;
+      top: 435px;
+      z-index: 22;
+      writing-mode: vertical-rl;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .28em;
+      color: #767a74;
+    }
+
+    .footer-code {
+      position: absolute;
+      left: 1090px;
+      top: 918px;
+      z-index: 22;
+      display: flex;
+      gap: 17px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      color: #71756f;
+    }
+    .barcode {
+      width: 126px;
+      height: 21px;
+      background: repeating-linear-gradient(90deg, #343633 0 2px, transparent 2px 4px, #343633 4px 5px, transparent 5px 9px);
+      opacity: .7;
+    }
+
+    .accent-square {
+      position: absolute;
+      background: #a8aaa6;
+    }
+    .sq1 { width: 70px; height: 70px; left: 348px; top: 890px; opacity: .68; }
+    .sq2 { width: 54px; height: 54px; left: 405px; top: 958px; opacity: .35; }
+
+    .small-cross {
+      position: absolute;
+      z-index: 18;
+      color: #767b75;
+      font-size: 18px;
+    }
+    .cross-a { left: 884px; top: 116px; }
+    .cross-b { right: 72px; bottom: 108px; }
+  </style>
+</head>
+<body>
+  <main class="banner">
+    <div class="noise"></div>
+    <div class="frame-line frame-a"></div>
+    <div class="frame-line frame-b"></div>
+    <div class="frame-rule rule-v r1"></div>
+    <div class="frame-rule rule-v r2"></div>
+    <div class="frame-rule rule-h r3"></div>
+    <div class="frame-rule rule-h r4"></div>
+
+    <div class="corner-mark cm1"></div>
+    <div class="corner-mark cm2"></div>
+    <div class="corner-mark cm3"></div>
+    <div class="small-cross cross-a">+</div>
+    <div class="small-cross cross-b">+</div>
+
+    <div class="top-meta">
+      <span class="chip">BETTERRNP</span>
+      <span class="green-dot"></span>
+      <span class="sub">RANDOM PICKER SYSTEM / 2026</span>
+    </div>
+    <div class="right-meta">
+      <strong>BUILD 2.1.0</strong>
+      .NET 8 / WPF / LOCAL FIRST
+    </div>
+
+    <div class="ghost-arc arc-a"></div>
+    <div class="ghost-arc arc-b"></div>
+
+    <div class="scan-block scan-a"></div>
+    <div class="color-reg reg-a"></div>
+    <div class="color-reg reg-b"></div>
+    <div class="color-reg reg-c"></div>
+
+    <section class="main-title">
+      <span class="line outline">BETTER</span>
+      <span class="line two"><span class="accent-letter">R</span>NP</span>
+      <span class="rnp-cut"></span>
+    </section>
+    <div class="title-rule"></div>
+    <div class="sub-title">RANDOM NAME <span>/</span> NUMBER <span>/</span> SEAT</div>
+
+    <section class="geo-stage">
+      <svg class="triangle-field" viewBox="0 0 560 392" aria-hidden="true">
+        <defs>
+          <pattern id="triangles" width="48" height="42" patternUnits="userSpaceOnUse">
+            <path d="M2 2 H48 L2 40 Z" fill="#9cff00"/>
+          </pattern>
+          <linearGradient id="fade" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="white" stop-opacity=".42"/>
+            <stop offset=".55" stop-color="white" stop-opacity=".92"/>
+            <stop offset="1" stop-color="white" stop-opacity=".58"/>
+          </linearGradient>
+          <mask id="mosaicMask">
+            <rect width="560" height="392" fill="url(#fade)"/>
+          </mask>
+        </defs>
+        <rect width="560" height="392" fill="url(#triangles)" mask="url(#mosaicMask)"/>
+      </svg>
+
+      <div class="orbit-line ol1"></div>
+      <div class="orbit-line ol2"></div>
+      <div class="triangle-outline to1"></div>
+      <div class="outline-square os1"></div>
+      <div class="cyan-orb"></div>
+      <div class="cyan-orb-small"></div>
+
+      <div class="selection-ring"></div>
+      <div class="ring-cross-v"></div>
+      <div class="ring-cross-h"></div>
+      <div class="shuffle-badge">
+        <svg viewBox="0 0 220 220" aria-label="Random shuffle">
+          <g fill="none" stroke="#fff" stroke-width="19" stroke-linecap="square" stroke-linejoin="miter">
+            <path d="M42 178 L176 44" />
+            <path d="M51 43 L99 91" />
+            <path d="M128 120 L177 169" />
+          </g>
+          <path d="M139 36 H184 V81" fill="none" stroke="#fff" stroke-width="19" />
+          <path d="M139 184 H184 V139" fill="none" stroke="#fff" stroke-width="19" />
+        </svg>
+      </div>
+
+      <div class="triangle-outline to2"></div>
+      <div class="yellow-disc"></div>
+      <div class="outline-square os2"></div>
+      <div class="dot-matrix">
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="bar-stack"><i></i><i></i><i></i><i></i><i></i></div>
+      <span class="scatter scatter-a"></span>
+      <span class="scatter scatter-b"></span>
+      <span class="scatter scatter-c"></span>
+      <span class="scatter scatter-d"></span>
+      <span class="scatter scatter-e"></span>
+      <span class="scatter scatter-f"></span>
+    </section>
+
+    <div class="beam beam-a"></div>
+    <div class="beam beam-b"></div>
+    <div class="beam beam-c"></div>
+
+    <div class="feature-line">
+      <span class="item"><b>01</b> 随机点名</span>
+      <span class="sep"></span>
+      <span class="item"><b>02</b> 数字抽取</span>
+      <span class="sep"></span>
+      <span class="item"><b>03</b> 座位抽取</span>
+    </div>
+    <div class="micro-label">FAIR / FAST / LOCAL / PLUGIN READY</div>
+
+    <div class="yellow-pill">课堂点名 · 数字 · 座位抽取</div>
+
+    <div class="accent-square sq1"></div>
+    <div class="accent-square sq2"></div>
+    <div class="vertical-label">RANDOM / FAIR / FAST / PLUGIN READY</div>
+    <div class="footer-code">
+      <span>RNPP 1.0</span>
+      <span class="barcode"></span>
+      <span>OFFICIAL / GH-PROXY UPDATE</span>
+    </div>
+  </main>
+</body>
+</html>

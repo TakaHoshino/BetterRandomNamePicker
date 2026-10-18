@@ -1,64 +1,139 @@
 # BetterRNP
 
-BetterRNP 是一个使用 **.NET 8 / C# / WPF** 重写的课堂与活动随机抽取工具，提供随机点名、随机数字和随机座位抽取。
+![BetterRNP 宣传 Banner](assets/banner/betterrnp-banner-geometric-v3-1920x1080.png)
 
-程序标题和托盘提示均为 `BetterRNP`。界面使用 WPF 默认控件、系统字体和系统颜色，呈现接近 Win32/Windows 原生对话框的视觉风格；托盘图标及其右键菜单使用 Win32 `Shell_NotifyIcon` + `CreatePopupMenu` / `TrackPopupMenu` 原生实现。
+**BetterRNP 是一款面向课堂、会议和活动现场的 Windows 随机抽取工具。**
 
-## 功能
+它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 三种抽取模式：
-  - 名字列表模式：从当前方案名单中随机抽取。
-  - 数字模式：支持负数、单值范围，跨度上限为 `2^31-1`。
-  - 座位模式：从已选座位中随机抽取，行列上限为 `30 × 30`。
-- 滚停式抽取：开始后每 50ms 刷新候选，再点一次停止并定格。
-- 方案管理：每套方案包含名称和 `name_list`、`number` 或 `seat` 类型。
-- 名单管理：添加、删除、导入 TXT、导出 TXT、显式保存。
-- 数字与座位设置：显式保存、未保存关闭确认、座位越界处理。
-- 配置锁定：锁定后拦截名单修改、导入导出和方案变更；支持修改密码。
-- 系统托盘：单/双击显示主窗口，右键弹出 Win32 原生菜单。
-- 悬浮球：置顶、拖动、双击快速抽取、右键配置入口。
-- 插件管理：采用类似 FuckETS 的 Win32 原生表格式管理界面，支持加载、移除、启用/禁用 `.rnpp` 插件。
-- 插件扩展：插件可向“插件”菜单添加命令，也可注册自定义抽取模式。
-- 检查更新：基于 GitHub Releases，启动时可自动检查，也可在设置或帮助菜单手动检查；支持官方源与 gh-proxy 镜像源。
-- 在线更新：自动检测当前安装是自包含版还是框架依赖版，默认选择对应更新包，也可手动切换；下载完成后覆盖重启。
-- 背景主题：图库缩略图预览、全局/按窗口类别指定、适配方式、遮罩与拖拽自由裁切。
-- 开机自启：写入当前用户的 Windows `Run` 注册表项。
-- 操作日志：写入 `log/Modifylog.txt`，可从设置窗口导出。
+- 当前版本：**BetterRNP 2.1.0**
+- 运行环境：**Windows 10 / 11 64 位**
 
-## 数据兼容
+## 为什么选择 BetterRNP
 
-新版保留原版的主要文件布局与加密格式：
+- **抽取过程直观**：点击开始后结果快速滚动，再点一次停止定格，比直接弹出结果更有现场氛围。
+- **一套程序覆盖三种场景**：随机点名、随机数字、随机座位共用同一套方案与交互。
+- **现场操作方便**：主窗口可隐藏到托盘，悬浮球可置顶显示，双击即可快速抽取。
+- **数据保存在本地**：名单、数字范围和座位配置加密存储，并自动维护多份备份。
+- **可按需扩展**：通过 `.rnpp` 插件增加菜单命令或自定义抽取模式。
+- **主题可定制**：支持导入图片、按窗口指定背景、遮罩和自由裁切。
+
+## 三种抽取模式
+
+| 模式 | 用途 | 说明 |
+|---|---|---|
+| 名字列表模式 | 课堂点名、活动抽人 | 从当前方案名单中随机选择姓名 |
+| 数字模式 | 抽取号码、积分或题号 | 支持负数、单值范围和自定义区间 |
+| 座位模式 | 随机选择座位 | 从座位图中已选座位里抽取，最多 30 × 30 布局 |
+
+所有模式都支持滚停式抽取：结果按 50ms 间隔轮换，点击“停止”后保留最终结果，并写入操作日志。
+
+## 主要功能
+
+### 方案与名单
+
+- 为不同班级、活动或课程创建独立方案。
+- 方案类型包括名单、数字和座位。
+- 名单支持手动添加、删除、TXT 导入与 TXT 导出。
+- 数字范围和座位布局采用显式保存，关闭前会提示未保存修改。
+- 启动时自动恢复上次使用的方案。
+
+### 现场抽取体验
+
+- 主窗口提供大字号结果区，适合投影和课堂展示。
+- 系统托盘提供显示/隐藏主窗口、悬浮球和退出入口。
+- 托盘右键菜单使用 Windows 原生 Win32 菜单。
+- 悬浮球支持置顶、拖动、双击随机抽取和右键快捷设置。
+- 重复启动程序时会唤醒已有窗口，不会产生多个实例。
+- 结果抽取后自动记录到本地日志。
+
+### 背景主题
+
+- 从本地导入 PNG、JPG、BMP、GIF、TIFF 等图片。
+- 图片库带缩略图预览。
+- 支持全局背景和按窗口类别单独指定。
+- 支持填充、适应、拉伸、居中和自由裁切。
+- 可调整背景遮罩，兼顾视觉效果和文字可读性。
+
+### 插件扩展
+
+- 插件包使用 `.rnpp` 扩展名。
+- 插件管理窗口支持加载、移除、启用和禁用插件。
+- 插件可以向主窗口“插件”菜单添加命令。
+- 插件可以注册新的抽取模式。
+- 插件状态自动保存，禁用后其界面入口立即隐藏。
+- 提供独立插件 SDK，构建插件时自动生成 `.rnpp` 包。
+
+插件开发请参阅 [插件开发文档](docs/PLUGIN_SDK.md)。
+
+### 检查更新
+
+- 启动时自动检查 GitHub Releases，也可手动检查。
+- 支持官方源和 `gh-proxy` 国内加速镜像源。
+- 自动识别当前安装是自包含版还是框架依赖版。
+- 更新时默认选择对应安装包，也可手动切换。
+- 下载完成后自动覆盖程序目录并重启。
+
+### 数据与安全
+
+- 名单、数字范围和座位配置使用 AES-GCM 加密。
+- 每个数据文件都带 SHA-256 完整性校验。
+- 数据同时保存在主目录、备份目录和日志目录，损坏时自动恢复。
+- 配置可锁定，防止现场误改名单或方案。
+- 密码散列使用 PBKDF2-HMAC-SHA256，并兼容旧版密码格式。
+- 所有数据默认保存在程序目录，不依赖云端账号。
+
+## 下载与安装
+
+前往 [GitHub Releases](https://github.com/TakaHoshino/BetterRandomNamePicker/releases/latest) 下载最新版本。
+
+Release 同时提供两种应用包：
+
+| 版本 | 适用情况 | 特点 |
+|---|---|---|
+| 自包含版 | 推荐 | 已内置 .NET 8 运行时，解压即用 |
+| 框架依赖版 | 已安装 .NET 8 Desktop Runtime | 体积更小，需要系统运行时 |
+
+下载后解压到任意可写目录，运行 `BetterRNP.exe` 即可。
+
+插件开发者还可以下载：
+
+- `BetterRNP.PluginSdk.1.0.0.nupkg`
+
+## 快速上手
+
+1. 启动 BetterRNP，从顶部选择预设方案。
+2. 选择名字列表、数字或座位模式。
+3. 点击“开始抽取”，结果会快速滚动。
+4. 再次点击“停止”，结果定格并写入日志。
+5. 如需修改数据，进入“配置名单”或对应模式设置窗口。
+6. 可从“设置”中启用托盘、悬浮球、背景主题和自动检查更新。
+
+## 数据位置
+
+程序默认在当前目录下创建：
 
 ```text
-data/
-├── config.properties
-├── schemes/
-│   ├── index.txt
-│   ├── <方案>_names.txt
-│   ├── <方案>_number.txt
-│   └── <方案>_seat.txt
-├── backup/
-└── themes/
-    ├── theme.properties
-    └── images/
-log/
-├── Modifylog.txt
-└── 加密数据第三副本
+data/      配置、方案、主题和插件状态
+log/       操作日志与加密备份
+plugins/   .rnpp 插件
 ```
 
-- 数据文件继续使用 AES-GCM，方案名参与 PBKDF2 派生盐。
-- 文件头部和 SHA-256 校验格式与原版一致，已有加密名单、数字范围和座位配置可以直接读取。
-- 名单、数字和座位各自维护 `data/schemes`、`data/backup`、`log` 三份副本；主文件损坏时按 `log > backup > data` 顺序恢复。
-- 密码兼容旧版无盐 SHA-256，并在成功验证后自动升级为 PBKDF2-HMAC-SHA256（21 万轮 + 随机盐）。
-- 旧版 Java 插件 jar 无法在 .NET 运行时中加载；新版插件使用 `.rnpp` 包，具体格式见下文。
+升级程序时不会覆盖已有 `data/` 和 `plugins/` 内容。
 
-默认密码与原版一致：
+旧版 Java 版本保存的加密名单、数字和座位数据可以继续读取。旧 Java 插件 jar 不再兼容，请使用新的 `.rnpp` 插件。
 
-```text
-#include<bits/stdc++.h>usingnamespacestd;intmain(){return0;}
-```
+## 技术栈
 
-## 构建
+- .NET 8
+- C# / WPF
+- Win32 托盘 API
+- AES-GCM + PBKDF2
+- GitHub Releases 更新机制
+
+界面采用系统字体、系统颜色和 WPF 默认控件样式，保持接近 Windows 原生对话框的观感。
+
+## 从源码构建
 
 需要 Windows 和 .NET 8 SDK：
 
@@ -66,145 +141,31 @@ log/
 dotnet build BetterRNP.sln -c Release
 ```
 
-主程序输出：
-
-```text
-src\BetterRNP\bin\Release\net8.0-windows\BetterRNP.exe
-```
-
-同时构建 Release 用的框架依赖版与自包含版：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
-```
-
-生成：
-
-```text
-artifacts\BetterRNP_win-x64_framework-dependent_v2.1.0.zip
-artifacts\BetterRNP_win-x64_self-contained_v2.1.0.zip
-artifacts\sdk\BetterRNP.PluginSdk.1.0.0.nupkg
-```
-
-直接运行：
+运行：
 
 ```bat
 dotnet run --project src\BetterRNP\BetterRNP.csproj
 ```
 
-## 测试
+同时生成自包含版、框架依赖版和插件 SDK：
 
-核心冒烟测试覆盖加密/解密、Java 数据兼容、三副本恢复、密码升级、名单、方案、数字、座位和配置持久化：
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
+```
+
+## 开发与文档
+
+- [插件开发文档](docs/PLUGIN_SDK.md)
+- [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)
+- 插件 SDK：[src/BetterRNP.PluginSdk](src/BetterRNP.PluginSdk)
+- 示例插件：[examples/BetterRNP.DemoPlugin](examples/BetterRNP.DemoPlugin)
+
+运行核心与界面冒烟测试：
 
 ```bat
 dotnet run --project tests\BetterRNP.Tests\BetterRNP.Tests.csproj -c Release
 ```
 
-界面启动快速检查：
+## 项目定位
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\ui-smoke.ps1
-```
-
-检查脚本会启动 Release 版本、确认主窗口标题为 `BetterRNP`，并使用 `PrintWindow` 生成 `ui-smoke.png` 截图。
-
-## 项目结构
-
-```text
-BetterRNP.sln
-src/BetterRNP/
-├── App.xaml / App.xaml.cs
-├── MainWindow.xaml / MainWindow.xaml.cs
-├── NativeTrayService.cs          # Win32 托盘与原生右键菜单
-├── Core/                         # 配置、加密、三副本数据、密码、主题、滚停引擎
-├── Models/                       # 方案、数字范围、座位配置
-├── Modes/                        # 名字、数字、座位三种抽取策略
-├── Plugins/                      # .rnpp 插件宿主、可卸载加载上下文、启停持久化
-└── Views/                        # 名单、方案、数字、座位、设置、主题、密码等窗口
-src/BetterRNP.PluginSdk/          # 插件作者引用的 SDK：清单、接口与 .rnpp 包工具
-examples/BetterRNP.DemoPlugin/    # 同时注册命令和抽取模式的示例插件
-tests/BetterRNP.Tests/            # 无第三方测试框架的核心冒烟测试
-tools/ui-smoke.ps1                # 启动与截图检查
-```
-
-## 插件包 `.rnpp`
-
-插件包是一个 zip 文件，扩展名固定为 `.rnpp`，包内至少包含：
-
-```text
-plugin.json
-YourPlugin.dll
-```
-
-`plugin.json` 示例：
-
-```json
-{
-  "id": "com.example.myplugin",
-  "name": "我的插件",
-  "version": "1.0.0",
-  "author": "Author",
-  "type": "mixed",
-  "assembly": "YourPlugin.dll",
-  "entryType": "MyPlugin.Entry",
-  "apiVersion": "1.0",
-  "description": "插件说明"
-}
-```
-
-`type` 可取 `command`、`mode`、`mixed`。插件程序集引用 `BetterRNP.PluginSdk`，实现 `IPlugin`，并在 `OnLoad` 中调用：
-
-- `context.RegisterCommand(...)`：向主窗口“插件”菜单添加命令。
-- `context.RegisterMode(...)`：向抽取模式下拉框添加自定义模式。
-
-插件管理窗口会显示名称、标识、作者、来源、类型、启用状态，并支持切换启停。禁用后，插件命令和自定义模式会立即从主界面移除，状态保存在 `data/plugins.json`。插件 DLL 使用可卸载的 `AssemblyLoadContext` 加载，SDK 程序集复用主程序版本。
-
-插件项目引用 SDK 包后，只需在项目根目录放置 `plugin.json`，每次 `dotnet build` 都会自动：
-
-1. 将 `plugin.json` 复制到输出目录。
-2. 检查清单中的入口程序集。
-3. 打包输出目录中的插件程序集和依赖。
-4. 在输出目录生成 `<插件 id>.rnpp`。
-
-SDK 可通过项目引用使用：
-
-```xml
-<ProjectReference Include="path\to\BetterRNP.PluginSdk.csproj" />
-<Import Project="path\to\BetterRNP.PluginSdk\build\BetterRNP.PluginSdk.targets" />
-```
-
-也可构建本地 NuGet 包后引用：
-
-```bat
-dotnet pack src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj -c Release -o artifacts\sdk
-```
-
-```xml
-<PackageReference Include="BetterRNP.PluginSdk" Version="1.0.0" />
-```
-
-NuGet 包自动导入 `BetterRNP.PluginSdk.targets`，无需手工打包脚本。
-
-构建示例插件包：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File examples\BetterRNP.DemoPlugin\build-rnpp.ps1
-```
-
-生成文件：
-
-```text
-examples\BetterRNP.DemoPlugin\BetterRNP.DemoPlugin.rnpp
-```
-
-## 原生样式说明
-
-WPF 控件不是 Win32 公共控件的直接实例，因此无法像 WinForms 那样让每个控件都由 `comctl32` 绘制。当前实现采用以下方式获得原生观感：
-
-- 使用 `SystemFonts.MessageFontFamily` 与系统字号。
-- 使用系统窗口、文本、边框和高亮颜色。
-- 使用 WPF 自带默认按钮、文本框、下拉框和菜单模板，不覆盖为自绘圆角控件。
-- 保持 Windows 默认窗口边框与标题栏。
-- 托盘右键菜单使用真正的 Win32 菜单 API。
-
-如果后续要求“每个控件本身必须是 Win32 原生控件”，应将界面层改为 WinForms/Win32 宿主；这与当前 WPF 技术选型属于不同实现路线。
+BetterRNP 的目标是成为一个简单、快速、可直接在课堂现场使用的随机抽取工具：不需要登录，不依赖网络，不要求复杂配置，同时为有需要的用户保留主题、插件和自动更新等扩展能力。

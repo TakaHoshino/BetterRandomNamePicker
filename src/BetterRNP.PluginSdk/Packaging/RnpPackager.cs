@@ -6,8 +6,7 @@ namespace BetterRNP.PluginSdk.Packaging;
 
 /// <summary>
 /// .rnpp (BetterRNP Plugin Package) is a zip package containing plugin.json and the
-/// declared entry assembly. The package layout follows the same simple convention as
-/// the FuckETS .fep format, but uses the BetterRNP-specific .rnpp extension.
+/// declared entry assembly, plus any runtime dependencies from the plugin build output.
 /// </summary>
 public static class RnpPackager
 {
