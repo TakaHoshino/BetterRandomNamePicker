@@ -569,6 +569,8 @@ README.md
 
 ## 16. SDK API 速查
 
+BetterRNP.PluginSdk 使用 **Apache License 2.0**。插件本身可以由作者选择不同的许可证，但分发 SDK 或基于 SDK 的衍生程序时应保留 Apache 2.0 许可证与 NOTICE 信息。
+
 ```csharp
 public interface IPlugin
 {

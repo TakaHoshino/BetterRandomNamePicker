@@ -169,3 +169,9 @@ dotnet run --project tests\BetterRNP.Tests\BetterRNP.Tests.csproj -c Release
 ## 项目定位
 
 BetterRNP 的目标是成为一个简单、快速、可直接在课堂现场使用的随机抽取工具：不需要登录，不依赖网络，不要求复杂配置，同时为有需要的用户保留主题、插件和自动更新等扩展能力。
+
+## 许可证
+
+本项目使用 **Apache License 2.0** 开源，详见 [LICENSE](LICENSE)。
+
+宣传 Banner 中使用的 Archivo Black 字体按其自身 **SIL Open Font License 1.1** 分发，详见 [OFL.txt](assets/banner/fonts/OFL.txt)。

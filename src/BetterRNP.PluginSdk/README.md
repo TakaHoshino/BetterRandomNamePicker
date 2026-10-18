@@ -16,3 +16,8 @@ The generated package contains the manifest, the entry assembly and other
 runtime dependencies from the plugin output. `BetterRNP.dll`,
 `BetterRNP.exe` and `BetterRNP.PluginSdk.dll` are intentionally excluded
 because the host provides them.
+
+## License
+
+BetterRNP.PluginSdk is licensed under the Apache License 2.0. See the
+`LICENSE` and `NOTICE` files in the BetterRNP repository.

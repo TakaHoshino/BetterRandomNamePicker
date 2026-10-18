@@ -35,6 +35,10 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item -LiteralPath (Join-Path $repo 'README.md') -Destination $frameworkDir -Force
 Copy-Item -LiteralPath (Join-Path $repo 'README.md') -Destination $selfContainedDir -Force
+Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination $frameworkDir -Force
+Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination $selfContainedDir -Force
+Copy-Item -LiteralPath (Join-Path $repo 'NOTICE') -Destination $frameworkDir -Force
+Copy-Item -LiteralPath (Join-Path $repo 'NOTICE') -Destination $selfContainedDir -Force
 
 $frameworkZip = Join-Path $artifacts "BetterRNP_${Runtime}_framework-dependent_$tag.zip"
 $selfContainedZip = Join-Path $artifacts "BetterRNP_${Runtime}_self-contained_$tag.zip"

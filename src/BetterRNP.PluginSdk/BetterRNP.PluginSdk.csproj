@@ -11,6 +11,8 @@
     <Description>SDK for building BetterRNP .rnpp plugins.</Description>
     <PackageTags>BetterRNP;Plugin;WPF</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Copyright>Copyright 2026 BetterRNP Contributors</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <None Include="build\BetterRNP.PluginSdk.targets"
