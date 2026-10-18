@@ -51,6 +51,7 @@ public sealed class FloatingBallWindow : Window
             Child = _label
         };
         ContextMenu = BuildContextMenu();
+        _app.Plugins.PluginsChanged += OnPluginsChanged;
 
         var workArea = SystemParameters.WorkArea;
         Left = Math.Max(0, workArea.Right - Width - 50);
@@ -59,10 +60,23 @@ public sealed class FloatingBallWindow : Window
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         Closed += (_, _) =>
         {
+            _app.Plugins.PluginsChanged -= OnPluginsChanged;
             _picker?.Stop();
             _picker = null;
         };
     }
+
+    private void OnPluginsChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(RefreshContextMenu));
+            return;
+        }
+        RefreshContextMenu();
+    }
+
+    private void RefreshContextMenu() => ContextMenu = BuildContextMenu();
 
     private ContextMenu BuildContextMenu()
     {
@@ -102,13 +116,29 @@ public sealed class FloatingBallWindow : Window
             menu.Items.Add(config);
         }
 
+        var ballCommands = _app.Plugins.FloatingBallCommands;
+        if (ballCommands.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+            foreach (var command in ballCommands)
+            {
+                var item = new MenuItem { Header = command.Title };
+                item.Click += (_, _) => _app.Plugins.ExecuteCommand(command, this);
+                menu.Items.Add(item);
+            }
+        }
+
         menu.Items.Add(new Separator());
         var settings = new MenuItem { Header = "悬浮球设置" };
         settings.Click += (_, _) => _app.ShellWindow.ShowSettingsWindow();
         menu.Items.Add(settings);
         menu.Items.Add(new Separator());
         var close = new MenuItem { Header = "关闭" };
-        close.Click += (_, _) => Close();
+        close.Click += (_, _) =>
+        {
+            _services.Log.Write("通过悬浮球菜单关闭悬浮球", "BALL_HIDDEN");
+            Close();
+        };
         menu.Items.Add(close);
         return menu;
     }
@@ -135,6 +165,7 @@ public sealed class FloatingBallWindow : Window
         var scheme = _app.ShellWindow.SelectedScheme;
         if (scheme is null)
         {
+            _services.Log.Write(LogLevel.Warn, "当前没有可用方案", "悬浮球抽取失败");
             _label.Text = "无方案";
             return;
         }
@@ -142,6 +173,7 @@ public sealed class FloatingBallWindow : Window
         var mode = _app.ShellWindow.BuildCurrentMode();
         if (mode is null)
         {
+            _services.Log.Write(LogLevel.Warn, $"方案={scheme.Name}", "悬浮球模式无效");
             _label.Text = "无效模式";
             return;
         }
@@ -149,6 +181,10 @@ public sealed class FloatingBallWindow : Window
         var block = mode.CanPick();
         if (block is not null)
         {
+            _services.Log.Write(
+                LogLevel.Warn,
+                $"方案={scheme.Name}｜模式={mode.DisplayName}｜原因={block}",
+                "悬浮球抽取受阻");
             _label.Text = mode.Id switch
             {
                 "name_list" => "损坏",
@@ -167,7 +203,8 @@ public sealed class FloatingBallWindow : Window
             autoStopped: () =>
             {
                 var result = _picker?.LastValue ?? string.Empty;
-                _services.Log.Write($"{scheme.Name}-{mode.DisplayName}={result}", "悬浮球抽取结果");
+                _services.Log.Write(
+                    $"方案={scheme.Name}｜模式={mode.DisplayName}｜结果={result}", "悬浮球抽取结果");
             });
         _picker.Start();
     }

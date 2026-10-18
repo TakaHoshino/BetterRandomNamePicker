@@ -34,12 +34,21 @@ public partial class ThemeWindow : Window
 
     private readonly AppServices _services;
     private readonly ObservableCollection<ThemeImage> _images = new();
+    private readonly System.Windows.Threading.DispatcherTimer _maskLogTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(600)
+    };
     private bool _syncing;
 
     public ThemeWindow(AppServices services)
     {
         _services = services;
         InitializeComponent();
+        _maskLogTimer.Tick += (_, _) =>
+        {
+            _maskLogTimer.Stop();
+            _services.Log.Write($"遮罩={_services.Theme.MaskAlpha}", "调整背景遮罩");
+        };
         ImageList.ItemsSource = _images;
         GlobalModeCombo.ItemsSource = ModeChoices;
         CategoryModeCombo.ItemsSource = ModeChoices;
@@ -117,7 +126,9 @@ public partial class ThemeWindow : Window
     {
         if (!_syncing)
         {
-            _services.Theme.IsEnabled = EnabledCheck.IsChecked == true;
+            var enabled = EnabledCheck.IsChecked == true;
+            _services.Theme.IsEnabled = enabled;
+            _services.Log.Write($"照片背景：{(enabled ? "启用" : "停用")}", "设置照片背景");
         }
     }
 
@@ -130,6 +141,7 @@ public partial class ThemeWindow : Window
         };
         if (dialog.ShowDialog(this) != true)
         {
+            _services.Log.Write("用户取消导入背景图片", "导入主题图片");
             return;
         }
         try
@@ -143,6 +155,7 @@ public partial class ThemeWindow : Window
         }
         catch (Exception ex)
         {
+            _services.Log.WriteException("IMPORT_THEME_IMAGE_ERROR", ex);
             MessageBox.Show(this, $"导入失败：{ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -159,6 +172,7 @@ public partial class ThemeWindow : Window
             "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result != MessageBoxResult.Yes)
         {
+            _services.Log.Write($"图片={image.DisplayName}", "取消删除主题图片");
             return;
         }
         _services.Theme.DeleteImage(image.Id);
@@ -172,6 +186,7 @@ public partial class ThemeWindow : Window
             "恢复默认", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result != MessageBoxResult.Yes)
         {
+            _services.Log.Write("用户取消恢复默认主题", "恢复默认主题");
             return;
         }
         _services.Theme.Reset();
@@ -188,6 +203,7 @@ public partial class ThemeWindow : Window
         if (ImageList.SelectedItem is ThemeImage image)
         {
             _services.Theme.SetGlobalImage(image.Id);
+            _services.Log.Write($"图片={image.DisplayName}", "设为全局背景");
             RefreshImages(image.Id);
         }
     }
@@ -197,6 +213,7 @@ public partial class ThemeWindow : Window
         if (!_syncing && GlobalImageCombo.SelectedItem is ImageChoice choice)
         {
             _services.Theme.SetGlobalImage(choice.Id);
+            _services.Log.Write($"图片={choice.Name}", "选择全局背景");
         }
     }
 
@@ -205,6 +222,7 @@ public partial class ThemeWindow : Window
         if (!_syncing && GlobalModeCombo.SelectedItem is ModeChoice choice)
         {
             _services.Theme.SetGlobalMode(choice.Mode);
+            _services.Log.Write($"模式={choice.Name}", "设置全局背景填充方式");
         }
     }
 
@@ -218,16 +236,22 @@ public partial class ThemeWindow : Window
             return;
         }
 
+        _services.Log.Write("窗口=裁切图片｜类别=全局背景", "打开窗口");
         var dialog = new CropImageWindow(image.Path, _services.Theme.GlobalCrop)
         {
             Owner = this
         };
         if (dialog.ShowDialog() != true)
         {
+            _services.Log.Write("用户取消全局背景裁切", "裁切背景");
             return;
         }
         _services.Theme.SetGlobalCrop(dialog.SelectedCrop);
         _services.Theme.SetGlobalMode(BackdropMode.Crop);
+        _services.Log.Write(
+            $"裁切区域={dialog.SelectedCrop.X:0.###},{dialog.SelectedCrop.Y:0.###},"
+            + $"{dialog.SelectedCrop.Width:0.###},{dialog.SelectedCrop.Height:0.###}",
+            "裁切全局背景");
         RefreshImages((ImageList.SelectedItem as ThemeImage)?.Id);
     }
 
@@ -240,6 +264,8 @@ public partial class ThemeWindow : Window
         var value = (int)e.NewValue;
         MaskValue.Text = value.ToString();
         _services.Theme.MaskAlpha = value;
+        _maskLogTimer.Stop();
+        _maskLogTimer.Start();
     }
 
     private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -257,6 +283,8 @@ public partial class ThemeWindow : Window
         {
             _services.Theme.SetCategoryImage(category.Id,
                 string.IsNullOrWhiteSpace(choice.Id) ? null : choice.Id);
+            _services.Log.Write(
+                $"类别={category.Name}｜图片={choice.Name}", "设置窗口背景");
         }
     }
 
@@ -266,6 +294,8 @@ public partial class ThemeWindow : Window
                       && CategoryModeCombo.SelectedItem is ModeChoice choice)
         {
             _services.Theme.SetCategoryMode(category.Id, choice.Mode);
+            _services.Log.Write(
+                $"类别={category.Name}｜方式={choice.Name}", "设置窗口背景填充方式");
         }
     }
 
@@ -285,6 +315,7 @@ public partial class ThemeWindow : Window
             return;
         }
 
+        _services.Log.Write($"窗口=裁切图片｜类别={category.Name}", "打开窗口");
         var dialog = new CropImageWindow(
             image.Path,
             _services.Theme.GetCategoryCrop(category.Id))
@@ -293,10 +324,15 @@ public partial class ThemeWindow : Window
         };
         if (dialog.ShowDialog() != true)
         {
+            _services.Log.Write($"类别={category.Name}", "取消窗口背景裁切");
             return;
         }
         _services.Theme.SetCategoryCrop(category.Id, dialog.SelectedCrop);
         _services.Theme.SetCategoryMode(category.Id, BackdropMode.Crop);
+        _services.Log.Write(
+            $"类别={category.Name}｜裁切区域={dialog.SelectedCrop.X:0.###},{dialog.SelectedCrop.Y:0.###},"
+            + $"{dialog.SelectedCrop.Width:0.###},{dialog.SelectedCrop.Height:0.###}",
+            "裁切窗口背景");
         RefreshImages((ImageList.SelectedItem as ThemeImage)?.Id);
     }
 
@@ -305,6 +341,7 @@ public partial class ThemeWindow : Window
         if (SelectedCategory is { } category)
         {
             _services.Theme.ClearCategory(category.Id);
+            _services.Log.Write($"类别={category.Name}", "清除窗口背景设置");
             RefreshCategoryControls();
         }
     }

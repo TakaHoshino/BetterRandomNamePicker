@@ -1,5 +1,6 @@
 using System.Windows;
 using BetterRNP.Core;
+using BetterRNP.Plugins;
 using BetterRNP.Views;
 
 namespace BetterRNP;
@@ -17,6 +18,7 @@ public partial class App : Application
 
     public AppServices Services { get; private set; } = null!;
     public MainWindow ShellWindow { get; private set; } = null!;
+    public PluginManager Plugins => ShellWindow.Plugins;
     public bool IsShuttingDown { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -40,6 +42,11 @@ public partial class App : Application
                 ? "自包含版"
                 : "框架依赖版",
             "UPDATE_INSTALL_TYPE");
+        Services.Log.Write(
+            $"{UpdateService.GetCurrentTag()}｜{Environment.OSVersion.VersionString}｜"
+            + $"{(Environment.Is64BitProcess ? "64" : "32")} 位｜数据目录 {Services.Paths.Root}",
+            "APP_START");
+        WireCrashLogging();
 
         if (Services.Config.AutoStart)
         {
@@ -52,15 +59,36 @@ public partial class App : Application
             showMain: ShowMainWindow,
             hideMain: HideMainWindow,
             toggleBall: ToggleFloatingBall,
-            exit: () => ExitApplication(true));
-        _tray.Install();
+            exit: () => ExitApplication(true),
+            log: message => Services.Log.Write(message, "TRAY"));
 
         ShellWindow.Show();
+        _tray.Install();
         if (Services.Config.AutoShowFloatingBall)
         {
             ShowFloatingBall();
             Services.Log.Write("按设置自动显示悬浮球", "BALL_AUTO_SHOW");
         }
+    }
+
+    private void WireCrashLogging()
+    {
+        DispatcherUnhandledException += (_, args) =>
+            Services.Log.WriteException("UNHANDLED_UI_EXCEPTION", args.Exception);
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception exception)
+            {
+                Services.Log.WriteException("UNHANDLED_EXCEPTION", exception);
+            }
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Services.Log.WriteException("UNOBSERVED_TASK_EXCEPTION", args.Exception);
+            args.SetObserved();
+        };
     }
 
     public void ShowMainWindow()
@@ -78,11 +106,13 @@ public partial class App : Application
         ShellWindow.Topmost = true;
         ShellWindow.Topmost = false;
         ShellWindow.Focus();
+        Services.Log.Write("显示主窗口", "显示主窗口");
     }
 
     public void HideMainWindow()
     {
         ShellWindow.Hide();
+        Services.Log.Write("隐藏主窗口", "隐藏主窗口");
     }
 
     public void ToggleFloatingBall()
@@ -138,6 +168,7 @@ public partial class App : Application
                 MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
             {
+                Services.Log.Write("用户取消退出", "取消退出");
                 return;
             }
         }

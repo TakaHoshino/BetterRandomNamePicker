@@ -4,7 +4,7 @@
 
 当前版本约定：
 
-- 主程序版本：BetterRNP 2.1.0
+- 主程序版本：BetterRNP 2.1.1
 - 插件 SDK 版本：`BetterRNP.PluginSdk 1.0.0`
 - 插件 API 版本：`1.0`
 - 插件包扩展名：`.rnpp`
@@ -15,6 +15,7 @@
 BetterRNP 插件在宿主进程内运行，可以：
 
 - 向主窗口“插件”菜单添加命令。
+- 向悬浮球右键菜单添加命令。
 - 向抽取模式下拉框添加自定义抽取模式。
 - 通过日志接口写入 BetterRNP 日志。
 - 在命令或模式按钮中创建自己的 WPF 窗口、访问文件或调用受信任的本地服务。
@@ -132,7 +133,7 @@ MyPlugin/
 
 类型含义：
 
-- `command`：只注册主菜单命令。
+- `command`：只注册菜单命令（主窗口“插件”菜单和/或悬浮球右键菜单）。
 - `pickerMode`：只注册自定义抽取模式。
 - `mixed`：同时注册命令和模式。
 
@@ -308,7 +309,11 @@ OnUnload()
 
 如果 `OnLoad` 抛出异常，插件加载失败，不会显示其命令或模式。异常会写入 BetterRNP 日志。
 
-## 8. 注册主菜单命令
+## 8. 注册菜单命令
+
+插件可以让命令出现在两个位置：主窗口的“插件”菜单，以及悬浮球的右键菜单。两者都接收一个动作委托，由宿主在 UI 线程调用。
+
+### 8.1 主窗口“插件”菜单
 
 接口：
 
@@ -336,6 +341,33 @@ context.RegisterCommand(
 - 命令动作在 UI 线程执行。
 - 动作抛出异常时，宿主记录 `PLUGIN_COMMAND_ERROR` 并显示错误提示。
 - 命令标题不要求跨插件唯一。
+
+### 8.2 悬浮球右键菜单
+
+接口：
+
+```csharp
+void RegisterFloatingBallCommand(string id, string title, Action action);
+```
+
+示例：
+
+```csharp
+context.RegisterFloatingBallCommand("count-up", "正计时", ShowCountUp);
+context.RegisterFloatingBallCommand("count-down", "倒计时", ShowCountDown);
+```
+
+注册后，悬浮球右键菜单会在“随机抽取”和模式设置之后、悬浮球设置之前插入这些命令，并用分隔线隔开。
+
+规则：
+
+- 命令按 `OnLoad` 中的注册顺序排列。
+- `id` 在同一插件内必须唯一；标题不要求跨插件唯一。
+- 命令只在插件启用时出现；悬浮球显示期间启用、禁用或移除插件，菜单会立即重建。
+- 动作在 UI 线程执行；异常会记录 `PLUGIN_COMMAND_ERROR` 并提示错误。
+- 悬浮球是宿主窗口，插件命令应自行创建需要的弹窗。宿主不会在悬浮球关闭时自动关闭插件窗口，窗口生命周期由插件在 `OnUnload` 中负责。
+
+完整的窗口型命令示例见 `examples/BetterRNP.TimerPlugin`：它在悬浮球菜单中加入“正计时”和“倒计时”，并弹出无标题栏、置顶的半透明计时窗口。
 
 ## 9. 注册自定义抽取模式
 
@@ -485,11 +517,13 @@ data\plugins.json
 context.Log("初始化完成");
 ```
 
-日志写入：
+日志以 `PLUGIN_LOG` 级别写入主日志，查看器中显示为：
 
 ```text
-log\Modifylog.txt
+[2026-10-18 15:30:12.345] [INFO ] 【PLUGIN_LOG】[插件显示名] 初始化完成
 ```
+
+日志文件为 `log\Modifylog.txt`，带级别、毫秒时间戳和自动滚动；可用“帮助 → 查看日志…”查看、筛选和导出。完整的记录清单见 [日志说明](LOGGING.md)。
 
 相关操作码包括：
 
@@ -562,6 +596,7 @@ README.md
 | 入口类型无效 | `entryType` 错误，或类型没有实现 `IPlugin` | 使用完整命名空间和类名 |
 | 加载被拒：API 版本不兼容 | `apiVersion` 主版本与宿主不同 | 改用兼容 API，或升级宿主 |
 | 命令没有出现 | 插件被禁用；`OnLoad` 抛异常；命令 ID 重复 | 检查插件状态和日志 |
+| 悬浮球菜单没有出现命令 | 插件被禁用；没有调用 `RegisterFloatingBallCommand`；命令 ID 重复 | 检查插件状态和日志 |
 | 模式没有出现 | 模式显示名冲突、模式 ID 冲突、插件禁用 | 修改为唯一名称和 ID |
 | 模式始终显示异常 | 插件内部异常 | 查看 `PLUGIN_MODE_ERROR` 日志并添加异常处理 |
 | 构建后没有 `.rnpp` | 未导入 SDK targets；`plugin.json` 不在项目根目录 | 使用 `PackageReference`，或显式导入 targets |
@@ -583,6 +618,7 @@ public interface IPluginContext
 {
     string PluginId { get; }
     void RegisterCommand(string id, string title, Action action);
+    void RegisterFloatingBallCommand(string id, string title, Action action);
     void RegisterMode(IPluginMode mode);
     void Log(string message);
 }

@@ -50,6 +50,9 @@ public partial class UpdateWindow : Window
             });
 
             var zipPath = await _services.Update.DownloadAsync(uri, progress, _cts.Token);
+            _services.Log.Write(
+                $"版本={_result.LatestTag}｜文件={Path.GetFileName(zipPath)}｜大小={new FileInfo(zipPath).Length} 字节",
+                "UPDATE_DOWNLOADED");
             _applying = true;
             CancelButton.IsEnabled = false;
             StatusText.Text = "下载完成，正在应用更新…";
@@ -57,6 +60,7 @@ public partial class UpdateWindow : Window
             ProgressText.Text = string.Empty;
 
             _services.Update.Apply(zipPath);
+            _services.Log.Write($"版本={_result.LatestTag}", "UPDATE_APPLIED");
             StatusText.Text = "更新已准备完成，程序将自动重启…";
             await Task.Delay(1000);
             _done = true;
@@ -78,7 +82,7 @@ public partial class UpdateWindow : Window
                 Close();
                 return;
             }
-            _services.Log.Write("更新下载超时", "UPDATE_TIMEOUT");
+            _services.Log.Write(LogLevel.Warn, "更新下载超时", "UPDATE_TIMEOUT");
             _done = true;
             MessageBox.Show(this,
                 "下载超时。可在设置中切换为 gh-proxy 代理源后重试。",
@@ -87,7 +91,7 @@ public partial class UpdateWindow : Window
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"更新失败: {ex}", "UPDATE_ERROR");
+            _services.Log.Write(LogLevel.Error, $"更新失败: {ex}", "UPDATE_ERROR");
             _done = true;
             MessageBox.Show(this, $"更新失败：{ex.Message}", "检查更新",
                 MessageBoxButton.OK, MessageBoxImage.Error);

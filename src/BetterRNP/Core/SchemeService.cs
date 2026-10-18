@@ -48,7 +48,7 @@ public sealed class SchemeService
         }
         catch (Exception ex)
         {
-            _log.Write($"读取方案索引失败: {ex.Message}", "SCHEME_INDEX_ERROR");
+            _log.Write(LogLevel.Error, $"读取方案索引失败: {ex.Message}", "SCHEME_INDEX_ERROR");
         }
         return schemes;
     }
@@ -62,7 +62,7 @@ public sealed class SchemeService
         }
         schemes.Add(new Scheme(name, type));
         SaveIndex(schemes);
-        _log.Write($"{name}-{type}", "创建方案");
+        _log.Write($"方案={name}｜类型={type}", "创建方案");
         return true;
     }
 
@@ -79,7 +79,7 @@ public sealed class SchemeService
         _data.DeleteAllCopies(name, DataKind.Names);
         _data.DeleteAllCopies(name, DataKind.Number);
         _data.DeleteAllCopies(name, DataKind.Seat);
-        _log.Write(name, "删除方案");
+        _log.Write($"方案={name}", "删除方案");
         return true;
     }
 
@@ -101,7 +101,7 @@ public sealed class SchemeService
         }
         catch (Exception ex)
         {
-            _log.Write($"加载方案[{name}]数字范围失败: {ex.Message}", "LOAD_NUMBER_ERROR");
+            _log.Write(LogLevel.Error, $"加载方案[{name}]数字范围失败: {ex.Message}", "LOAD_NUMBER_ERROR");
             return null;
         }
     }
@@ -109,7 +109,7 @@ public sealed class SchemeService
     public void SaveNumberRange(string name, NumberRange range)
     {
         _data.SaveNumberRange(name, $"{range.Min},{range.Max}");
-        _log.Write($"方案[{name}]数字范围已保存", "SAVE_NUMBER_SUCCESS");
+        _log.Write($"方案={name}｜范围=[{range.Min},{range.Max}]", "SAVE_NUMBER_SUCCESS");
     }
 
     public SeatConfig? GetSeatConfig(string name)
@@ -151,13 +151,13 @@ public sealed class SchemeService
             }
             if (dropped > 0)
             {
-                _log.Write($"方案[{name}]座位配置含{dropped}个越界座位已忽略（{rows}×{cols}）", "SEAT_OUT_OF_RANGE");
+                _log.Write(LogLevel.Warn, $"方案[{name}]座位配置含{dropped}个越界座位已忽略（{rows}×{cols}）", "SEAT_OUT_OF_RANGE");
             }
             return new SeatConfig(rows, cols, seats);
         }
         catch (Exception ex)
         {
-            _log.Write($"加载方案[{name}]座位配置失败: {ex.Message}", "LOAD_SEAT_ERROR");
+            _log.Write(LogLevel.Error, $"加载方案[{name}]座位配置失败: {ex.Message}", "LOAD_SEAT_ERROR");
             return null;
         }
     }
@@ -171,7 +171,9 @@ public sealed class SchemeService
             content.Append((int)seat.X).Append(',').Append((int)seat.Y).Append('\n');
         }
         _data.SaveSeatConfig(name, content.ToString());
-        _log.Write($"方案[{name}]座位配置已保存", "SAVE_SEAT_SUCCESS");
+        _log.Write(
+            $"方案={name}｜行数={config.Rows}｜列数={config.Cols}｜已选座位数={config.SelectedSeats.Count}",
+            "SAVE_SEAT_SUCCESS");
     }
 
     private void SaveIndex(IEnumerable<Scheme> schemes)

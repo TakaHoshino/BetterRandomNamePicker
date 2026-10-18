@@ -108,7 +108,7 @@ public sealed class NameListMode : IPickMode
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"导入失败: {ex.Message}", "IMPORT_ERROR");
+            _services.Log.Write(LogLevel.Error, $"导入失败: {ex.Message}", "IMPORT_ERROR");
             MessageBox.Show(owner, $"导入失败：{ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -142,7 +142,7 @@ public sealed class NameListMode : IPickMode
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"导出失败: {ex.Message}", "EXPORT_ERROR");
+            _services.Log.Write(LogLevel.Error, $"导出失败: {ex.Message}", "EXPORT_ERROR");
             MessageBox.Show(owner, $"导出失败：{ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }

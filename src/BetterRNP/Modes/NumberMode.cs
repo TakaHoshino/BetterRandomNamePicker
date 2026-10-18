@@ -72,7 +72,7 @@ public sealed class NumberMode : IPickMode
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        _services.Log.Write($"{scheme.Name}-[{range.Min},{range.Max}]", "查看数字范围");
+        _services.Log.Write($"方案={scheme.Name}｜范围=[{range.Min},{range.Max}]", "查看数字范围");
         MessageBox.Show(owner,
             $"当前数字范围：[{range.Min}, {range.Max}]\n（修改请在“设置数字范围”中保存）",
             "提示", MessageBoxButton.OK, MessageBoxImage.Information);

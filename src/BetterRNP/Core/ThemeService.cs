@@ -460,7 +460,7 @@ public sealed class ThemeService
         }
         catch (Exception ex)
         {
-            _log.Write($"保存主题设置失败: {ex.Message}", "THEME_SAVE_ERROR");
+            _log.Write(LogLevel.Error, $"保存主题设置失败: {ex.Message}", "THEME_SAVE_ERROR");
         }
     }
 

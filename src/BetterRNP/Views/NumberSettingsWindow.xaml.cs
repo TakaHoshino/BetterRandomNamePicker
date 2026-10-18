@@ -64,6 +64,8 @@ public partial class NumberSettingsWindow : Window
                 ResultText.Text = $"抽取结果: {value}";
             });
         _picker.Start();
+        _services.Log.Write(
+            $"方案={_schemeName}｜模式=数字模式｜范围=[{min},{max}]", "开始抽取");
     }
 
     private void StopPicking()
@@ -74,7 +76,8 @@ public partial class NumberSettingsWindow : Window
         _picker = null;
         if (_lastResult is not null)
         {
-            _services.Log.Write($"{_schemeName}-数字模式={_lastResult}", "抽取结果");
+            _services.Log.Write(
+                $"方案={_schemeName}｜模式=数字模式｜结果={_lastResult}", "抽取结果");
         }
     }
 
@@ -85,12 +88,15 @@ public partial class NumberSettingsWindow : Window
         if (!int.TryParse(MinInput.Text.Trim(), out min)
             || !int.TryParse(MaxInput.Text.Trim(), out max))
         {
+            _services.Log.Write(
+                LogLevel.Warn, $"最小值={MinInput.Text}｜最大值={MaxInput.Text}", "数字范围无效");
             MessageBox.Show(this, "请输入有效的数字！", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         if (min > max)
         {
+            _services.Log.Write(LogLevel.Warn, $"最小值={min}｜最大值={max}", "数字范围无效");
             MessageBox.Show(this, "最小值不能大于最大值！", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
@@ -98,6 +104,7 @@ public partial class NumberSettingsWindow : Window
         var span = (long)max - min + 1L;
         if (span > int.MaxValue)
         {
+            _services.Log.Write(LogLevel.Warn, $"最小值={min}｜最大值={max}｜跨度={span}", "数字范围过大");
             MessageBox.Show(this, $"范围过大：取值跨度需 ≤ {int.MaxValue - 1L}（当前 {span}）", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
@@ -116,7 +123,6 @@ public partial class NumberSettingsWindow : Window
         _services.Schemes.SaveNumberRange(_schemeName, new Models.NumberRange(min, max));
         _committedMin = MinInput.Text.Trim();
         _committedMax = MaxInput.Text.Trim();
-        _services.Log.Write($"{_schemeName}-[{min},{max}]", "保存数字范围");
         if (notify)
         {
             MessageBox.Show(this, "设置已保存！", "提示",
@@ -131,7 +137,7 @@ public partial class NumberSettingsWindow : Window
         {
             return;
         }
-        _services.Log.Write(_schemeName, "应用数字范围到方案");
+        _services.Log.Write($"方案={_schemeName}", "应用数字范围到方案");
         MessageBox.Show(this, $"设置已应用到方案：{_schemeName}（已保存）", "提示",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -152,11 +158,13 @@ public partial class NumberSettingsWindow : Window
         if (result == MessageBoxResult.Yes)
         {
             _closingApproved = true;
+            _services.Log.Write($"方案={_schemeName}", "放弃未保存的修改");
             StopPicking();
         }
         else
         {
             e.Cancel = true;
+            _services.Log.Write($"方案={_schemeName}", "取消关闭数字设置");
         }
     }
 }

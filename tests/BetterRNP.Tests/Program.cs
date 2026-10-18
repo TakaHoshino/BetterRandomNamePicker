@@ -1,12 +1,15 @@
 using System.Text;
 using System.IO.Compression;
 using System.Windows;
+using System.Windows.Controls;
 using BetterRNP.Core;
 using BetterRNP.Models;
 using BetterRNP.Modes;
 using BetterRNP.Plugins;
 using BetterRNP.PluginSdk.Models;
 using BetterRNP.PluginSdk.Packaging;
+using BetterRNP.TimerPlugin.Timing;
+using BetterRNP.TimerPlugin.Views;
 using BetterRNP.Views;
 
 namespace BetterRNP.Tests;
@@ -29,12 +32,18 @@ internal static class Program
     private static int Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
-        var root = Path.Combine(Path.GetTempPath(), "BetterRNP.Tests", Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(
+            AppContext.BaseDirectory,
+            ".test-data",
+            Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
             RunCoreTests(root);
+            RunLogTests(root);
             RunPluginTests(root);
+            RunTimerPluginTests(root);
+            RunTimerEngineTests();
             RunWindowConstructionTests(root);
         }
         catch (Exception ex)
@@ -252,6 +261,214 @@ internal static class Program
             seatCandidate is "(1, 2)" or "(2, 1)");
     }
 
+    private static void RunTimerPluginTests(string root)
+    {
+        const string manifest = """
+        {
+          "id": "com.betterrnp.timer",
+          "name": "BetterRNP 计时插件",
+          "version": "1.0.0",
+          "author": "BetterRNP",
+          "type": "command",
+          "assembly": "BetterRNP.TimerPlugin.dll",
+          "entryType": "BetterRNP.TimerPlugin.TimerPlugin",
+          "apiVersion": "1.0",
+          "description": "test"
+        }
+        """;
+
+        var pluginAssembly = Path.Combine(AppContext.BaseDirectory, "BetterRNP.TimerPlugin.dll");
+        Check("timer plugin assembly is available", File.Exists(pluginAssembly));
+        var packagePath = Path.Combine(root, "timer.rnpp");
+        WritePluginPackage(packagePath, manifest, pluginAssembly);
+        Check("timer rnpp manifest validation",
+            RnpPackager.ReadManifest(packagePath) is { Success: true, Manifest.Id: "com.betterrnp.timer" });
+
+        var services = AppServices.Create(Path.Combine(root, "timer-services"));
+        using var plugins = new PluginManager(services);
+        var load = plugins.LoadFromPackage(packagePath, copyIntoPluginDirectory: false);
+        Check("timer rnpp loads", load.Success);
+        Check("timer plugin registers two floating ball commands",
+            plugins.FloatingBallCommands.Count == 2);
+        Check("floating ball command titles are 正计时 and 倒计时",
+            plugins.FloatingBallCommands.Select(command => command.Title)
+                .SequenceEqual(new[] { "正计时", "倒计时" }));
+        Check("timer plugin adds no main menu commands", plugins.Commands.Count == 0);
+
+        var loaded = load.Info;
+        Check("disabled timer plugin hides floating ball commands",
+            loaded is not null
+            && plugins.SetEnabled(loaded.Manifest.Id, false)
+            && plugins.FloatingBallCommands.Count == 0);
+        Check("re-enabled timer plugin restores floating ball commands",
+            loaded is not null
+            && plugins.SetEnabled(loaded.Manifest.Id, true)
+            && plugins.FloatingBallCommands.Count == 2);
+    }
+
+    private static void RunTimerEngineTests()
+    {
+        var clock = TimeSpan.Zero;
+
+        var up = new TimerEngine(TimerMode.CountUp, TimeSpan.Zero, () => clock);
+        Check("count-up starts at 00:00",
+            up.State == TimerState.Idle && up.DisplayText == "00:00" && !up.IsWarning);
+
+        up.Start();
+        clock = TimeSpan.FromSeconds(1.4);
+        Check("count-up advances the display", !up.Tick() && up.DisplayText == "00:01");
+
+        up.Pause();
+        clock = TimeSpan.FromSeconds(9);
+        Check("paused count-up freezes its time", !up.Tick() && up.DisplayText == "00:01");
+
+        up.Start();
+        clock = TimeSpan.FromSeconds(10);
+        Check("resumed count-up continues from the pause", !up.Tick() && up.DisplayText == "00:02");
+
+        up.Reset();
+        Check("reset returns count-up to zero",
+            up.State == TimerState.Idle && up.DisplayText == "00:00");
+
+        clock = TimeSpan.Zero;
+        var down = new TimerEngine(TimerMode.CountDown, TimeSpan.FromSeconds(30), () => clock);
+        Check("countdown starts at its configured duration",
+            down.DisplayText == "00:30" && !down.IsWarning);
+
+        down.Start();
+        clock = TimeSpan.FromSeconds(19);
+        Check("countdown counts down",
+            !down.Tick() && down.DisplayText == "00:11" && !down.IsWarning);
+
+        clock = TimeSpan.FromSeconds(20);
+        Check("countdown turns red in the last 10 seconds",
+            !down.Tick() && down.IsWarning && down.DisplayText == "00:10");
+
+        clock = TimeSpan.FromSeconds(30);
+        Check("countdown finishes at zero",
+            down.Tick() && down.State == TimerState.Finished && down.DisplayText == "00:00");
+        Check("finished countdown reports completion only once", !down.Tick());
+
+        down.Reset();
+        Check("reset restores the countdown duration",
+            down.State == TimerState.Idle
+            && down.DisplayText == "00:30"
+            && !down.IsWarning);
+
+        down.Start();
+        clock = TimeSpan.FromSeconds(31);
+        Check("restarted countdown uses the full duration again",
+            !down.Tick() && down.DisplayText == "00:29");
+
+        Check("time formatting uses MM:SS",
+            TimerEngine.FormatTime(TimeSpan.FromSeconds(59.7)) == "00:59");
+        Check("countdown formatting rounds up",
+            TimerEngine.FormatTime(TimeSpan.FromSeconds(59.7), roundUp: true) == "01:00");
+        Check("time formatting adds hours when needed",
+            TimerEngine.FormatTime(TimeSpan.FromSeconds(3661)) == "1:01:01");
+    }
+
+    private static void WritePluginPackage(string packagePath, string manifest, string assemblyPath)
+    {
+        using var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create);
+        var manifestEntry = archive.CreateEntry(RnpPackager.ManifestFileName);
+        using (var writer = new StreamWriter(manifestEntry.Open(), new UTF8Encoding(false)))
+        {
+            writer.Write(manifest);
+        }
+        archive.CreateEntryFromFile(assemblyPath, Path.GetFileName(assemblyPath));
+    }
+
+    private static void RunLogTests(string root)
+    {
+        var services = AppServices.Create(Path.Combine(root, "log-tests"));
+        var log = services.Log;
+
+        log.Write("信息内容", "TEST_INFO");
+        log.Write(LogLevel.Warn, "警告内容", "TEST_WARN");
+        log.Write(LogLevel.Error, "错误内容", "TEST_ERROR");
+
+        var entries = log.ReadEntries();
+        Check("structured log records operation and level",
+            entries.Any(entry => entry.Operation == "TEST_INFO" && entry.Level == LogLevel.Info)
+            && entries.Any(entry => entry.Operation == "TEST_WARN" && entry.Level == LogLevel.Warn)
+            && entries.Any(entry => entry.Operation == "TEST_ERROR" && entry.Level == LogLevel.Error));
+        Check("log entries keep their detail and timestamp",
+            entries.Last(entry => entry.Operation == "TEST_WARN").Detail == "警告内容"
+            && entries.Last(entry => entry.Operation == "TEST_WARN").Timestamp > DateTime.Now.AddMinutes(-5));
+        Check("log level displays in Chinese",
+            entries.Last(entry => entry.Operation == "TEST_WARN").LevelText == "警告");
+
+        log.Write(LogLevel.Error, "第一行\r\n第二行", "TEST_MULTILINE");
+        Check("multi-line details stay on one line",
+            log.ReadEntries().Last(entry => entry.Operation == "TEST_MULTILINE").Detail
+                == "第一行 ⏎ 第二行");
+
+        try
+        {
+            throw new InvalidOperationException("boom");
+        }
+        catch (Exception ex)
+        {
+            log.WriteException("TEST_EXCEPTION", ex);
+        }
+        var exceptionEntry = log.ReadEntries().Last(entry => entry.Operation == "TEST_EXCEPTION");
+        Check("exceptions are logged as errors with their type",
+            exceptionEntry.Level == LogLevel.Error
+            && exceptionEntry.Detail.Contains("InvalidOperationException: boom", StringComparison.Ordinal));
+
+        File.AppendAllText(
+            log.LogFile,
+            "[2024-01-02 03:04:05] 【旧详情】【旧操作】" + Environment.NewLine,
+            new UTF8Encoding(false));
+        var legacyEntry = log.ReadEntries().Last(entry => entry.Operation == "旧操作");
+        Check("legacy log lines are still readable",
+            legacyEntry.Level == LogLevel.Info && legacyEntry.Detail == "旧详情");
+
+        LogEntry? captured = null;
+        void OnWritten(object? sender, LogEntry entry) => captured = entry;
+        log.EntryWritten += OnWritten;
+        log.Write("事件内容", "TEST_EVENT");
+        log.EntryWritten -= OnWritten;
+        Check("EntryWritten reports new entries",
+            captured is { Operation: "TEST_EVENT", Detail: "事件内容" });
+
+        Check("log reports a non-zero file size", log.GetFileSize() > 0);
+        Check("log file can be cleared", log.Clear() && log.ReadEntries().Count == 0);
+        log.Write("清空后重新记录", "TEST_AFTER_CLEAR");
+        Check("logging works after a clear", log.ReadEntries().Count == 1);
+
+        services.Schemes.AddScheme("日志方案", Scheme.NumberType);
+        services.Schemes.SaveNumberRange("日志方案", new NumberRange(3, 9));
+        var schemeLog = log.ReadEntries().Last(entry => entry.Operation == "SAVE_NUMBER_SUCCESS");
+        Check("scheme saves log detailed context",
+            schemeLog.Detail.Contains("方案=日志方案", StringComparison.Ordinal)
+            && schemeLog.Detail.Contains("范围=[3,9]", StringComparison.Ordinal));
+
+        services.Passwords.VerifyAndUnlock("wrong-password");
+        var failedPassword = log.ReadEntries().Last(entry => entry.Operation == "PASSWORD_FAILED");
+        Check("failed password attempts are logged as warnings",
+            failedPassword.Level == LogLevel.Warn);
+
+        var rotatePaths = new AppPaths(Path.Combine(root, "log-rotate"));
+        rotatePaths.EnsureDirectories();
+        var rotating = new LogService(rotatePaths) { MaxFileBytes = 600, MaxArchives = 2 };
+        for (var index = 0; index < 40; index++)
+        {
+            rotating.Write(new string('x', 40), $"ROTATE_{index}");
+        }
+
+        Check("log rotates when it reaches the size limit",
+            File.Exists(Path.Combine(rotatePaths.LogDir, "Modifylog.1.txt")));
+        Check("rotation keeps only the configured archive count",
+            File.Exists(Path.Combine(rotatePaths.LogDir, "Modifylog.2.txt"))
+            && !File.Exists(Path.Combine(rotatePaths.LogDir, "Modifylog.3.txt")));
+        Check("rotated log keeps the current file small",
+            new FileInfo(rotatePaths.LogFile).Length < 1200);
+        Check("rotated log still reads back entries",
+            rotating.ReadEntries().Count is > 0 and < 40);
+    }
+
     private static void Check(string name, bool condition)
     {
         if (condition)
@@ -275,6 +492,11 @@ internal static class Program
     {
         var application = new App();
         application.InitializeComponent();
+        using (var trayService = new NativeTrayService(() => { }, () => { }, () => { }, () => { }))
+        {
+            trayService.Install();
+            Check("native tray host becomes visible", trayService.IsInstalled);
+        }
         var services = AppServices.Create(root);
         using var pluginManager = new PluginManager(services);
         var updatePrompt = UpdateService.EvaluateReleaseJson("""
@@ -292,11 +514,14 @@ internal static class Program
             new NumberSettingsWindow(services, "默认方案"),
             new SeatSettingsWindow(services, "默认方案"),
             new SettingsWindow(services),
+            new LogWindow(services),
             new ThemeWindow(services),
             new PluginManagerWindow(pluginManager),
             new UpdatePromptWindow(updatePrompt),
             new PasswordWindow(services, "密码验证", "请输入密码："),
-            new ChangePasswordWindow(services)
+            new ChangePasswordWindow(services),
+            new TimerWindow(TimerMode.CountUp, TimeSpan.Zero),
+            new CountdownSetupWindow()
         };
 
         foreach (var window in windows)
@@ -331,7 +556,66 @@ internal static class Program
                 Fail($"crop window constructs ({ex.GetType().Name}: {ex.Message})");
             }
         }
+        CheckFloatingBallMenu(application, root);
+        CheckCountdownDialog();
         application.Shutdown();
+    }
+
+    private static void CheckCountdownDialog()
+    {
+        var setup = new CountdownSetupWindow();
+        setup.Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                typeof(CountdownSetupWindow)
+                    .GetMethod("Confirm", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(setup, null);
+            }),
+            System.Windows.Threading.DispatcherPriority.Normal);
+
+        var picked = setup.PickDuration();
+        Check("countdown dialog confirms the default five minutes",
+            picked == TimeSpan.FromMinutes(5));
+    }
+
+    private static void CheckFloatingBallMenu(App application, string root)
+    {
+        var services = AppServices.Create(Path.Combine(root, "ball-menu"));
+        Directory.CreateDirectory(services.Paths.PluginsDir);
+        File.Copy(
+            Path.Combine(root, "timer.rnpp"),
+            Path.Combine(services.Paths.PluginsDir, "timer.rnpp"),
+            overwrite: true);
+
+        var shell = new MainWindow(services);
+        typeof(App).GetProperty(nameof(App.ShellWindow))!.SetValue(application, shell);
+
+        var ball = new FloatingBallWindow(services, application);
+        var items = ball.ContextMenu.Items.OfType<MenuItem>().ToList();
+        var headers = items.Select(item => item.Header?.ToString()).ToList();
+        Check("floating ball menu lists plugin commands",
+            headers.Contains("正计时") && headers.Contains("倒计时"));
+        Check("plugin commands sit before the ball settings entry",
+            headers.IndexOf("正计时") < headers.IndexOf("悬浮球设置")
+            && headers.IndexOf("倒计时") < headers.IndexOf("悬浮球设置"));
+
+        var countUp = items.First(item => (string?)item.Header == "正计时");
+        countUp.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        // 插件运行在独立的 AssemblyLoadContext 中，其 TimerWindow 类型与测试程序集的不同，
+        // 因此按类型全名查找。
+        var opened = Application.Current.Windows
+            .Cast<Window>()
+            .Where(window => window.GetType().FullName == "BetterRNP.TimerPlugin.Views.TimerWindow")
+            .ToList();
+        Check("floating ball command opens the timer window", opened.Count == 1);
+        foreach (var window in opened)
+        {
+            window.Close();
+        }
+
+        ball.Close();
+        shell.ShutdownPlugins();
+        shell.Close();
     }
 
     private static void RunPluginTests(string root)
@@ -353,15 +637,7 @@ internal static class Program
         var pluginAssembly = Path.Combine(AppContext.BaseDirectory, "BetterRNP.DemoPlugin.dll");
         Check("demo plugin assembly is available", File.Exists(pluginAssembly));
         var packagePath = Path.Combine(root, "demo.rnpp");
-        using (var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create))
-        {
-            var manifestEntry = archive.CreateEntry(RnpPackager.ManifestFileName);
-            using (var writer = new StreamWriter(manifestEntry.Open(), new UTF8Encoding(false)))
-            {
-                writer.Write(manifest);
-            }
-            archive.CreateEntryFromFile(pluginAssembly, "BetterRNP.DemoPlugin.dll");
-        }
+        WritePluginPackage(packagePath, manifest, pluginAssembly);
 
         Check("rnpp manifest validation",
             RnpPackager.ReadManifest(packagePath) is { Success: true, Manifest.Id: "com.betterrnp.demo" });

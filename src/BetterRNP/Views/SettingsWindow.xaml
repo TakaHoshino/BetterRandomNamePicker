@@ -151,10 +151,19 @@
                                FontSize="17"
                                FontWeight="SemiBold"
                                Margin="0,0,0,10" />
-                    <Button Content="导出日志文件"
-                            Style="{StaticResource SecondaryButton}"
-                            HorizontalAlignment="Left"
-                            Click="ExportLog_Click" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="查看日志"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="ViewLog_Click" />
+                        <Button Content="导出日志文件"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="ExportLog_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="LogPathText"
+                               FontSize="11"
+                               Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                               TextWrapping="Wrap"
+                               Margin="2,8,0,0" />
                 </StackPanel>
             </Border>
 

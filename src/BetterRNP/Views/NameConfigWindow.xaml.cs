@@ -43,6 +43,11 @@ public partial class NameConfigWindow : Window
     private void SchemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         LoadNames();
+        if (SchemeCombo.SelectedItem is Scheme scheme)
+        {
+            _services.Log.Write(
+                $"方案={scheme.Name}｜名单数={_names.Count}", "名单配置_切换方案");
+        }
     }
 
     private void LoadNames()
@@ -66,6 +71,7 @@ public partial class NameConfigWindow : Window
             _services.Names.DeleteCorruptedCopies(scheme.Name);
             _names.Clear();
             CountText.Text = "共 0 条";
+            _services.Log.Write(LogLevel.Warn, $"方案={scheme.Name}", "名单损坏");
             MessageBox.Show(this, "名单已损坏，请重新导入", "数据损坏警告",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -77,6 +83,7 @@ public partial class NameConfigWindow : Window
         {
             return true;
         }
+        _services.Log.Write(LogLevel.Warn, "名单配置窗口处于锁定状态", "操作被拒绝");
         MessageBox.Show(this, "当前为锁定模式，请先解锁", "提示",
             MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
@@ -99,7 +106,8 @@ public partial class NameConfigWindow : Window
         NameInput.Clear();
         NameInput.Focus();
         CountText.Text = $"共 {_names.Count} 条";
-        _services.Log.Write(name, "添加姓名");
+        _services.Log.Write(
+            $"方案={CurrentSchemeName()}｜姓名={name}｜共{_names.Count}条", "添加姓名");
     }
 
     private void NameInput_KeyDown(object sender, KeyEventArgs e)
@@ -129,7 +137,8 @@ public partial class NameConfigWindow : Window
             _names.Remove(name);
         }
         CountText.Text = $"共 {_names.Count} 条";
-        _services.Log.Write(string.Join(",", selected), "删除姓名");
+        _services.Log.Write(
+            $"方案={CurrentSchemeName()}｜姓名={string.Join("、", selected)}｜剩余{_names.Count}条", "删除姓名");
     }
 
     private void Import_Click(object sender, RoutedEventArgs e)
@@ -145,6 +154,7 @@ public partial class NameConfigWindow : Window
         };
         if (dialog.ShowDialog(this) != true)
         {
+            _services.Log.Write("用户取消导入名单", "导入名单");
             return;
         }
         try
@@ -175,6 +185,7 @@ public partial class NameConfigWindow : Window
         };
         if (dialog.ShowDialog(this) != true)
         {
+            _services.Log.Write("用户取消导出名单", "导出名单");
             return;
         }
         try
@@ -190,6 +201,9 @@ public partial class NameConfigWindow : Window
         }
     }
 
+    private string CurrentSchemeName()
+        => (SchemeCombo.SelectedItem as Scheme)?.Name ?? Scheme.BuiltInDefaultName;
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!RequireUnlocked() || SchemeCombo.SelectedItem is not Scheme scheme)
@@ -199,7 +213,6 @@ public partial class NameConfigWindow : Window
         try
         {
             _services.Names.SaveNames(scheme.Name, _names);
-            _services.Log.Write($"{scheme.Name}-共{_names.Count}条记录", "保存名单");
             MessageBox.Show(this, "保存成功！", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }

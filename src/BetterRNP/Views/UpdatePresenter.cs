@@ -42,7 +42,7 @@ public static class UpdatePresenter
                                    || ex is TaskCanceledException
                                    || ex is OperationCanceledException)
         {
-            services.Log.Write($"检查更新失败: {ex.Message}", "UPDATE_CHECK_ERROR");
+            services.Log.Write(LogLevel.Error, $"检查更新失败: {ex.Message}", "UPDATE_CHECK_ERROR");
             if (userInitiated)
             {
                 MessageBox.Show(owner,
@@ -53,7 +53,7 @@ public static class UpdatePresenter
         }
         catch (Exception ex)
         {
-            services.Log.Write($"检查更新失败: {ex}", "UPDATE_CHECK_ERROR");
+            services.Log.Write(LogLevel.Error, $"检查更新失败: {ex}", "UPDATE_CHECK_ERROR");
             if (userInitiated)
             {
                 var detail = ex is HttpRequestException { StatusCode: HttpStatusCode.NotFound }

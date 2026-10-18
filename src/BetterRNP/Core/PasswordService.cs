@@ -36,6 +36,7 @@ public sealed class PasswordService
         var hash = _config.PasswordHash;
         if (string.IsNullOrWhiteSpace(hash) || !_encryption.VerifyPassword(password, hash))
         {
+            _log.Write(LogLevel.Warn, "密码验证失败", "PASSWORD_FAILED");
             return false;
         }
 
@@ -45,6 +46,7 @@ public sealed class PasswordService
             _config.SetPasswordHash(_encryption.HashPassword(password));
             _log.Write("密码散列已升级为 PBKDF2-HMAC-SHA256", "SECURITY_UPGRADE");
         }
+        _log.Write("密码验证通过，配置已解锁", "PASSWORD_UNLOCK");
         return true;
     }
 
@@ -52,6 +54,7 @@ public sealed class PasswordService
     {
         if (newPassword.Length < 4 || newPassword.Length > 100)
         {
+            _log.Write(LogLevel.Warn, $"长度={newPassword.Length}", "密码修改被拒绝");
             return false;
         }
         _config.SetPasswordHash(_encryption.HashPassword(newPassword));
@@ -66,7 +69,11 @@ public sealed class PasswordService
             || _encryption.VerifyPassword(BuiltInDefaultPassword, hash);
     }
 
-    public void Lock() => _unlocked = false;
+    public void Lock()
+    {
+        _unlocked = false;
+        _log.Write("配置已锁定", "PASSWORD_LOCK");
+    }
 
     public void Unlock() => _unlocked = true;
 
@@ -86,7 +93,7 @@ public sealed class PasswordService
         }
         _ctrlLCount = 0;
         _unlocked = true;
-        _log.Write("Ctrl+L 备用通道已解锁配置", "PASSWORD_BACKDOOR");
+        _log.Write(LogLevel.Warn, "Ctrl+L 备用通道已解锁配置", "PASSWORD_BACKDOOR");
         return true;
     }
 

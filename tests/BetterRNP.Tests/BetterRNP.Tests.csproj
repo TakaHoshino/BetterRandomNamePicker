@@ -11,5 +11,6 @@
     <ProjectReference Include="..\..\src\BetterRNP\BetterRNP.csproj" />
     <ProjectReference Include="..\..\src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj" />
     <ProjectReference Include="..\..\examples\BetterRNP.DemoPlugin\BetterRNP.DemoPlugin.csproj" />
+    <ProjectReference Include="..\..\examples\BetterRNP.TimerPlugin\BetterRNP.TimerPlugin.csproj" />
   </ItemGroup>
 </Project>

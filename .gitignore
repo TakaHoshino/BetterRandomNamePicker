@@ -8,6 +8,7 @@
 *.cache
 publish/
 artifacts/
+.signing/
 
 # Runtime data and logs
 data/
@@ -19,6 +20,7 @@ plugins/
 
 # Generated smoke-test output
 ui-smoke*.png
+tray-*.png
 
 # OS/editor files
 .DS_Store

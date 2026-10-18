@@ -6,7 +6,7 @@
 
 它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 当前版本：**BetterRNP 2.1.0**
+- 当前版本：**BetterRNP 2.1.1**
 - 运行环境：**Windows 10 / 11 64 位**
 
 ## 为什么选择 BetterRNP
@@ -60,6 +60,7 @@
 - 插件包使用 `.rnpp` 扩展名。
 - 插件管理窗口支持加载、移除、启用和禁用插件。
 - 插件可以向主窗口“插件”菜单添加命令。
+- 插件可以向悬浮球右键菜单添加命令。
 - 插件可以注册新的抽取模式。
 - 插件状态自动保存，禁用后其界面入口立即隐藏。
 - 提供独立插件 SDK，构建插件时自动生成 `.rnpp` 包。
@@ -73,6 +74,14 @@
 - 自动识别当前安装是自包含版还是框架依赖版。
 - 更新时默认选择对应安装包，也可手动切换。
 - 下载完成后自动覆盖程序目录并重启。
+
+### 操作日志
+
+- 程序会把启动、抽取、方案与名单修改、设置调整、主题、更新、插件和异常等操作全部写入 `log/Modifylog.txt`。
+- 每条记录包含毫秒级时间、级别（信息 / 警告 / 错误）、操作名和详细参数，例如 `方案=初三1班｜模式=名字列表模式｜结果=张三`。
+- 日志超过 1 MB 自动滚动，保留 5 份历史文件（`Modifylog.1.txt` 为最近一份）。
+- “帮助 → 查看日志…”或“设置 → 查看日志”可打开日志查看器：按级别筛选、关键字搜索、自动刷新、打开日志目录、导出和清空。
+- 完整的操作清单见 [日志说明](docs/LOGGING.md)。
 
 ### 数据与安全
 
@@ -95,6 +104,8 @@ Release 同时提供两种应用包：
 | 框架依赖版 | 已安装 .NET 8 Desktop Runtime | 体积更小，需要系统运行时 |
 
 下载后解压到任意可写目录，运行 `BetterRNP.exe` 即可。
+
+> 正式公开构建应使用受信任的代码签名证书。未签名版本在 Windows 上可能显示“未知发布者”或 SmartScreen 提示。签名配置见 [代码签名文档](docs/CODE_SIGNING.md)。
 
 插件开发者还可以下载：
 
@@ -156,9 +167,27 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 ## 开发与文档
 
 - [插件开发文档](docs/PLUGIN_SDK.md)
+- [代码签名文档](docs/CODE_SIGNING.md)
+- [日志说明](docs/LOGGING.md)
+- [BetterRNP v2.1.1 Release Note](docs/releases/v2.1.1.md)
 - [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)
 - 插件 SDK：[src/BetterRNP.PluginSdk](src/BetterRNP.PluginSdk)
 - 示例插件：[examples/BetterRNP.DemoPlugin](examples/BetterRNP.DemoPlugin)
+
+生成并信任默认本地开发签名：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\create-dev-signing-cert.ps1 -InstallTrust
+```
+
+签名流程兼容 Windows PowerShell 5.1 与 PowerShell 7，不要求额外安装 `pwsh`。
+
+如果发布包附带 `BetterRNP-Development-Certificate.cer`，可运行以下命令让当前用户信任该自签名发布证书：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install-release-cert.ps1 -CertificatePath .\BetterRNP-Development-Certificate.cer
+```
+- 计时插件示例：[examples/BetterRNP.TimerPlugin](examples/BetterRNP.TimerPlugin)
 
 运行核心与界面冒烟测试：
 

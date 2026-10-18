@@ -107,7 +107,7 @@ public sealed class ConfigService
         }
         catch (Exception ex)
         {
-            _log.Write($"保存配置失败: {ex.Message}", "CONFIG_SAVE_ERROR");
+            _log.Write(LogLevel.Error, $"保存配置失败: {ex.Message}", "CONFIG_SAVE_ERROR");
         }
     }
 
@@ -138,7 +138,7 @@ public sealed class ConfigService
         }
         catch (Exception ex)
         {
-            _log.Write($"读取配置失败: {ex.Message}", "CONFIG_LOAD_ERROR");
+            _log.Write(LogLevel.Error, $"读取配置失败: {ex.Message}", "CONFIG_LOAD_ERROR");
             return new JavaProperties();
         }
     }

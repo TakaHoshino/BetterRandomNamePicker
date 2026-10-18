@@ -15,7 +15,7 @@ public sealed class AppServices
         Schemes = new SchemeService(paths, Data, Log);
         Theme = new ThemeService(paths, Log);
         UpdateSettings = new UpdateSettingsService(paths);
-        Update = new UpdateService(Log);
+        Update = new UpdateService(Log, paths);
     }
 
     public AppPaths Paths { get; }

@@ -87,7 +87,7 @@ public sealed class DataStore
         WriteFile(Path.Combine(_paths.SchemesDir, fileName), encrypted, hash);
         WriteFile(Path.Combine(_paths.BackupDir, clean + "_" + fileName), encrypted, hash);
         WriteFile(Path.Combine(_paths.LogDir, DisguiseFileName(clean, fileName)), encrypted, hash);
-        _log.Write($"保存方案[{schemeName}] {kind}", "SAVE_WITH_ENCRYPTION");
+        _log.Write($"方案={schemeName}｜类型={kind}", "SAVE_WITH_ENCRYPTION");
     }
 
     private string? Load(string schemeName, DataKind kind)
@@ -108,7 +108,7 @@ public sealed class DataStore
         {
             if (File.Exists(original) && new FileInfo(original).Length > 0)
             {
-                _log.Write($"方案[{schemeName}]数据损坏且无法恢复", "RECOVERY_FAILED");
+                _log.Write(LogLevel.Error, $"方案[{schemeName}]数据损坏且无法恢复", "RECOVERY_FAILED");
                 throw new DataCorruptedException($"方案[{schemeName}]数据损坏且无法恢复");
             }
             return null;
@@ -283,7 +283,7 @@ public sealed class DataStore
         }
         catch (Exception ex)
         {
-            _log.Write($"删除文件失败: {path} ({ex.Message})", "FILE_DELETE_FAILED");
+            _log.Write(LogLevel.Error, $"删除文件失败: {path} ({ex.Message})", "FILE_DELETE_FAILED");
         }
     }
 }

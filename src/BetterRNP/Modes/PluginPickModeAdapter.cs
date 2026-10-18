@@ -39,7 +39,7 @@ public sealed class PluginPickModeAdapter : IPickMode
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"插件模式校验异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
+            _services.Log.Write(LogLevel.Error, $"插件模式校验异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
             return "插件模式校验异常";
         }
     }
@@ -56,7 +56,7 @@ public sealed class PluginPickModeAdapter : IPickMode
             }
             catch (Exception ex)
             {
-                _services.Log.Write($"插件模式候选异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
+                _services.Log.Write(LogLevel.Error, $"插件模式候选异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
                 return "插件模式异常";
             }
         };
@@ -70,7 +70,7 @@ public sealed class PluginPickModeAdapter : IPickMode
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
+            _services.Log.Write(LogLevel.Error, $"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
             MessageBox.Show(owner, $"插件模式按钮执行失败：{ex.Message}", "插件错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -84,7 +84,7 @@ public sealed class PluginPickModeAdapter : IPickMode
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
+            _services.Log.Write(LogLevel.Error, $"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
             MessageBox.Show(owner, $"插件模式按钮执行失败：{ex.Message}", "插件错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }

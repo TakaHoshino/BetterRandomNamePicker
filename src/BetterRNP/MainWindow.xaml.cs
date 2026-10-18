@@ -42,6 +42,7 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write("主窗口已显示", "显示主窗口");
         LoadSchemes(_services.Config.LastScheme);
         ModeCombo.SelectedIndex = 0;
         UpdateModeSpecificButtons();
@@ -98,6 +99,8 @@ public partial class MainWindow : Window
         _suppressEvents = false;
         UpdateModeSpecificButtons();
         UpdateDisplayText();
+        _services.Log.Write(
+            $"方案={CurrentScheme.Name}｜类型={CurrentScheme.Type}｜默认模式={targetMode}", "切换方案");
     }
 
     private void ModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -108,6 +111,10 @@ public partial class MainWindow : Window
         }
         UpdateModeSpecificButtons();
         UpdateDisplayText();
+        if (ModeCombo.SelectedItem is string modeName)
+        {
+            _services.Log.Write($"模式={modeName}", "切换模式");
+        }
     }
 
     private void UpdateModeSpecificButtons()
@@ -172,7 +179,10 @@ public partial class MainWindow : Window
         var blockReason = _currentMode.CanPick();
         if (blockReason is not null)
         {
-            _services.Log.Write($"{scheme.Name}-{_currentMode.DisplayName}={DisplayText.Text}", "抽取结果");
+            _services.Log.Write(
+                LogLevel.Warn,
+                $"方案={scheme.Name}｜模式={_currentMode.DisplayName}｜原因={blockReason}",
+                "抽取被拦截");
             MessageBox.Show(this, blockReason,
                 _currentMode.Id == "name_list" ? "错误" : "提示",
                 MessageBoxButton.OK,
@@ -188,7 +198,8 @@ public partial class MainWindow : Window
             _currentMode.CreateCandidateSupplier(),
             candidate => DisplayText.Text = candidate);
         _rollingPicker.Start();
-        _services.Log.Write($"{scheme.Name}-{_currentMode.DisplayName}", "开始抽取");
+        _services.Log.Write(
+            $"方案={scheme.Name}｜模式={_currentMode.DisplayName}", "开始抽取");
     }
 
     private void StopPicking()
@@ -199,39 +210,37 @@ public partial class MainWindow : Window
         _rollingPicker = null;
         if (_pickSchemeName is not null && _pickModeName is not null)
         {
-            _services.Log.Write($"{_pickSchemeName}-{_pickModeName}={DisplayText.Text}", "抽取结果");
+            _services.Log.Write(
+                $"方案={_pickSchemeName}｜模式={_pickModeName}｜结果={DisplayText.Text}", "抽取结果");
         }
         _pickSchemeName = null;
         _pickModeName = null;
     }
 
-    private void Names_Click(object sender, RoutedEventArgs e)
-    {
-        new NameConfigWindow(_services) { Owner = this }.ShowDialog();
-    }
+    private void Names_Click(object sender, RoutedEventArgs e) => ShowNameConfigWindow();
 
     private void Schemes_Click(object sender, RoutedEventArgs e) => ShowSchemes();
 
     private void ShowSchemes()
     {
+        _services.Log.Write("窗口=方案管理", "打开窗口");
         new SchemeManagerWindow(_services) { Owner = this }.ShowDialog();
         LoadSchemes();
         UpdateModeSpecificButtons();
     }
 
-    private void Settings_Click(object sender, RoutedEventArgs e)
-    {
-        new SettingsWindow(_services) { Owner = this }.ShowDialog();
-        ThemeEnabledItem.IsChecked = _services.Theme.IsEnabled;
-    }
+    private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettingsWindow();
 
     private void ThemeEnabled_Click(object sender, RoutedEventArgs e)
     {
         _services.Theme.IsEnabled = ThemeEnabledItem.IsChecked;
+        _services.Log.Write(
+            $"照片背景：{(ThemeEnabledItem.IsChecked ? "启用" : "停用")}", "SETTING_CHANGED");
     }
 
     private void ThemeSettings_Click(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write("窗口=背景主题", "打开窗口");
         new ThemeWindow(_services) { Owner = this }.ShowDialog();
         ThemeEnabledItem.IsChecked = _services.Theme.IsEnabled;
     }
@@ -249,13 +258,15 @@ public partial class MainWindow : Window
 
     private void ModeButton1_Click(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write(
+            $"模式={_currentMode?.DisplayName}｜按钮={ModeButton1.Content}", "模式按钮");
         try
         {
             _currentMode?.HandleButton1(this);
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"模式按钮操作异常: {ex}", "MODE_ACTION_ERROR");
+            _services.Log.WriteException("MODE_ACTION_ERROR", ex);
             MessageBox.Show(this, $"模式按钮操作异常：{ex.Message}", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -263,13 +274,15 @@ public partial class MainWindow : Window
 
     private void ModeButton2_Click(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write(
+            $"模式={_currentMode?.DisplayName}｜按钮={ModeButton2.Content}", "模式按钮");
         try
         {
             _currentMode?.HandleButton2(this);
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"模式按钮操作异常: {ex}", "MODE_ACTION_ERROR");
+            _services.Log.WriteException("MODE_ACTION_ERROR", ex);
             MessageBox.Show(this, $"模式按钮操作异常：{ex.Message}", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -277,14 +290,18 @@ public partial class MainWindow : Window
 
     private void About_Click(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write("窗口=关于", "打开窗口");
         MessageBox.Show(this,
             "BetterRNP\n\n.NET 8 / C# / WPF 随机点名、随机数字与随机座位抽取工具。\n"
             + "托盘菜单使用 Windows 原生 Shell_NotifyIcon 与 TrackPopupMenu 实现。",
             "关于 BetterRNP", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private void ShowLog_Click(object sender, RoutedEventArgs e) => LogWindow.ShowFor(this, _services);
+
     private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
+        _services.Log.Write("手动检查更新", "检查更新");
         await UpdatePresenter.CheckAsync(this, _services, true);
     }
 
@@ -305,7 +322,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _services.Log.Write($"启动时检查更新失败: {ex.Message}", "UPDATE_CHECK_ERROR");
+            _services.Log.Write(LogLevel.Error, $"启动时检查更新失败: {ex.Message}", "UPDATE_CHECK_ERROR");
         }
     }
 
@@ -324,7 +341,10 @@ public partial class MainWindow : Window
         PluginsMenu.Items.Clear();
         var managerItem = new MenuItem { Header = "插件管理…" };
         managerItem.Click += (_, _) =>
+        {
+            _services.Log.Write("窗口=插件管理", "打开窗口");
             new PluginManagerWindow(_plugins) { Owner = this }.ShowDialog();
+        };
         PluginsMenu.Items.Add(managerItem);
 
         var commands = _plugins.Commands;
@@ -370,6 +390,8 @@ public partial class MainWindow : Window
 
     public void ShutdownPlugins() => _plugins.Dispose();
 
+    public PluginManager Plugins => _plugins;
+
     public Scheme? SelectedScheme => CurrentScheme;
 
     public IPickMode? BuildCurrentMode() => CreateMode(ModeCombo.SelectedItem as string);
@@ -398,15 +420,24 @@ public partial class MainWindow : Window
     }
 
     public void ShowNameConfigWindow()
-        => new NameConfigWindow(_services) { Owner = this }.ShowDialog();
+    {
+        _services.Log.Write(
+            $"窗口=名单配置｜方案={CurrentScheme?.Name ?? Scheme.BuiltInDefaultName}", "打开窗口");
+        new NameConfigWindow(_services) { Owner = this }.ShowDialog();
+    }
 
     public void ShowSettingsWindow()
-        => new SettingsWindow(_services) { Owner = this }.ShowDialog();
+    {
+        _services.Log.Write("窗口=系统设置", "打开窗口");
+        new SettingsWindow(_services) { Owner = this }.ShowDialog();
+        ThemeEnabledItem.IsChecked = _services.Theme.IsEnabled;
+    }
 
     public void ShowNumberSettingsWindow()
     {
         if (CurrentScheme is not null)
         {
+            _services.Log.Write($"窗口=数字设置｜方案={CurrentScheme.Name}", "打开窗口");
             new NumberSettingsWindow(_services, CurrentScheme.Name) { Owner = this }.ShowDialog();
         }
     }
@@ -415,6 +446,7 @@ public partial class MainWindow : Window
     {
         if (CurrentScheme is not null)
         {
+            _services.Log.Write($"窗口=座位设置｜方案={CurrentScheme.Name}", "打开窗口");
             new SeatSettingsWindow(_services, CurrentScheme.Name) { Owner = this }.ShowDialog();
         }
     }
@@ -435,6 +467,7 @@ public partial class MainWindow : Window
         if (_services.Config.MinimizeToTray)
         {
             e.Cancel = true;
+            _services.Log.Write("主窗口已最小化到托盘", "隐藏主窗口");
             Hide();
         }
         else

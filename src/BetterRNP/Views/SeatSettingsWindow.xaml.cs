@@ -227,6 +227,7 @@ public partial class SeatSettingsWindow : Window
     {
         if (_selectedSeats.Count == 0)
         {
+            _services.Log.Write(LogLevel.Warn, $"方案={_schemeName}", "未选择座位，无法抽取");
             MessageBox.Show(this, "请先选择座位！", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -247,6 +248,8 @@ public partial class SeatSettingsWindow : Window
                 ResultText.Text = $"抽取结果: {value}";
             });
         _picker.Start();
+        _services.Log.Write(
+            $"方案={_schemeName}｜模式=座位模式｜候选座位={seats.Length}", "开始抽取");
     }
 
     private void StopPicking()
@@ -257,7 +260,8 @@ public partial class SeatSettingsWindow : Window
         _picker = null;
         if (_lastResult is not null)
         {
-            _services.Log.Write($"{_schemeName}-座位模式={_lastResult}", "抽取结果");
+            _services.Log.Write(
+                $"方案={_schemeName}｜模式=座位模式｜结果={_lastResult}", "抽取结果");
         }
     }
 
@@ -276,9 +280,6 @@ public partial class SeatSettingsWindow : Window
             new SeatConfig(rows, cols, _selectedSeats));
         MarkCommitted();
         BuildSeatGrid();
-        _services.Log.Write(
-            $"{_schemeName}-行数={rows},列数={cols},已选座位数={_selectedSeats.Count}",
-            "保存座位设置");
         if (notify)
         {
             MessageBox.Show(this, "设置已保存！", "提示",
@@ -293,7 +294,7 @@ public partial class SeatSettingsWindow : Window
         {
             return;
         }
-        _services.Log.Write(_schemeName, "应用座位设置到方案");
+        _services.Log.Write($"方案={_schemeName}", "应用座位设置到方案");
         MessageBox.Show(this, $"设置已应用到方案：{_schemeName}（已保存）", "提示",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -316,11 +317,13 @@ public partial class SeatSettingsWindow : Window
         if (result == MessageBoxResult.Yes)
         {
             _closingApproved = true;
+            _services.Log.Write($"方案={_schemeName}", "放弃未保存的修改");
             StopPicking();
         }
         else
         {
             e.Cancel = true;
+            _services.Log.Write($"方案={_schemeName}", "取消关闭座位设置");
         }
     }
 }

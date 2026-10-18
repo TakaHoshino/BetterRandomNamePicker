@@ -11,6 +11,7 @@
         <SolidColorBrush x:Key="LineBrush" Color="{x:Static SystemColors.ActiveBorderColor}" />
 
         <Style TargetType="{x:Type Window}">
+            <Setter Property="Icon" Value="pack://application:,,,/Assets/BetterRNP.ico" />
             <Setter Property="FontFamily" Value="{x:Static SystemFonts.MessageFontFamily}" />
             <Setter Property="FontSize" Value="{x:Static SystemFonts.MessageFontSize}" />
             <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />

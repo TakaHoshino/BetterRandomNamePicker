@@ -44,12 +44,12 @@ public sealed class UpdateService
     private readonly HttpClient _http;
     private readonly string _updateDirectory;
 
-    public UpdateService(LogService log)
+    public UpdateService(LogService log, AppPaths paths)
     {
         _log = log;
         _http = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd($"BetterRNP/{GetCurrentTag()}");
-        _updateDirectory = Path.Combine(Path.GetTempPath(), "BetterRNP_update");
+        _updateDirectory = Path.Combine(paths.DataDir, "update-cache");
     }
 
     public static Version GetCurrentVersion()

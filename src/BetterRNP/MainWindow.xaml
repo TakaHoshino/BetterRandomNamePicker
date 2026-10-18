@@ -25,6 +25,7 @@
             </MenuItem>
             <MenuItem Header="帮助">
                 <MenuItem Header="检查更新…" Click="CheckUpdate_Click" />
+                <MenuItem Header="查看日志…" Click="ShowLog_Click" />
                 <Separator />
                 <MenuItem Header="关于 BetterRNP" Click="About_Click" />
             </MenuItem>

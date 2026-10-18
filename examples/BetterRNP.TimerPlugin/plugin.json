@@ -1,0 +1,11 @@
+{
+  "id": "com.betterrnp.timer",
+  "name": "BetterRNP 计时插件",
+  "version": "1.0.0",
+  "author": "BetterRNP",
+  "type": "command",
+  "assembly": "BetterRNP.TimerPlugin.dll",
+  "entryType": "BetterRNP.TimerPlugin.TimerPlugin",
+  "apiVersion": "1.0",
+  "description": "在悬浮球右键菜单中提供正计时与倒计时弹窗。"
+}

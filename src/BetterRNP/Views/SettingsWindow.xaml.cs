@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using BetterRNP.Core;
 using Microsoft.Win32;
 
@@ -7,6 +8,8 @@ namespace BetterRNP.Views;
 public partial class SettingsWindow : Window
 {
     private readonly AppServices _services;
+    private readonly DispatcherTimer _radiusLogTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
+    private readonly DispatcherTimer _opacityLogTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private bool _loading;
     private bool _checkingUpdate;
 
@@ -14,6 +17,16 @@ public partial class SettingsWindow : Window
     {
         _services = services;
         InitializeComponent();
+        _radiusLogTimer.Tick += (_, _) =>
+        {
+            _radiusLogTimer.Stop();
+            _services.Log.Write($"悬浮球半径={_services.Config.FloatingBallRadius}", "调整悬浮球外观");
+        };
+        _opacityLogTimer.Tick += (_, _) =>
+        {
+            _opacityLogTimer.Stop();
+            _services.Log.Write($"悬浮球透明度={_services.Config.FloatingBallOpacity}", "调整悬浮球外观");
+        };
         _services.Theme.Attach(this, ThemeService.CategorySettings);
         LoadSettings();
     }
@@ -49,6 +62,7 @@ public partial class SettingsWindow : Window
             DefaultPasswordWarning.Visibility = _services.Passwords.IsUsingBuiltInDefaultPassword()
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+            LogPathText.Text = $"日志文件：{_services.Log.LogFile}";
         }
         finally
         {
@@ -82,13 +96,16 @@ public partial class SettingsWindow : Window
             MessageBox.Show(this, "修改开机启动注册表失败，请检查当前用户权限。", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        _services.Log.Write($"开机自启：{(enabled ? "开启" : "关闭")}", "SETTING_CHANGED");
     }
 
     private void MinimizeToTray_Click(object sender, RoutedEventArgs e)
     {
         if (!_loading)
         {
-            _services.Config.SetMinimizeToTray(MinimizeToTrayCheck.IsChecked == true);
+            var enabled = MinimizeToTrayCheck.IsChecked == true;
+            _services.Config.SetMinimizeToTray(enabled);
+            _services.Log.Write($"关闭主窗口时最小化到托盘：{(enabled ? "开启" : "关闭")}", "SETTING_CHANGED");
         }
     }
 
@@ -100,6 +117,7 @@ public partial class SettingsWindow : Window
         }
         var enabled = AutoShowBallCheck.IsChecked == true;
         _services.Config.SetAutoShowFloatingBall(enabled);
+        _services.Log.Write($"启动时自动显示悬浮球：{(enabled ? "开启" : "关闭")}", "SETTING_CHANGED");
         if (enabled && Application.Current is App app && !app.IsFloatingBallVisible)
         {
             app.ShowFloatingBall();
@@ -115,6 +133,8 @@ public partial class SettingsWindow : Window
         var radius = (int)e.NewValue;
         RadiusValue.Text = $"{radius} 像素";
         _services.Config.SetFloatingBallRadius(radius);
+        _radiusLogTimer.Stop();
+        _radiusLogTimer.Start();
     }
 
     private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -126,22 +146,34 @@ public partial class SettingsWindow : Window
         var opacity = (int)e.NewValue;
         OpacityValue.Text = OpacityText(opacity);
         _services.Config.SetFloatingBallOpacity(opacity);
+        _opacityLogTimer.Stop();
+        _opacityLogTimer.Start();
     }
 
     private void ThemeEnabled_Click(object sender, RoutedEventArgs e)
     {
         if (!_loading)
         {
-            _services.Theme.IsEnabled = ThemeEnabledCheck.IsChecked == true;
+            var enabled = ThemeEnabledCheck.IsChecked == true;
+            _services.Theme.IsEnabled = enabled;
+            _services.Log.Write($"照片背景：{(enabled ? "启用" : "停用")}", "SETTING_CHANGED");
         }
     }
 
+    private void ViewLog_Click(object sender, RoutedEventArgs e)
+        => LogWindow.ShowFor(Owner is { IsVisible: true } ? Owner : this, _services);
+
     private void UpdateSetting_Click(object sender, RoutedEventArgs e)
     {
-        if (!_loading)
+        if (_loading)
         {
-            PersistUpdateSettings();
+            return;
         }
+        PersistUpdateSettings();
+        _services.Log.Write(
+            $"启动时检查更新：{(CheckOnStartupCheck.IsChecked == true ? "开启" : "关闭")}；"
+            + $"下载源：{(ProxySourceRadio.IsChecked == true ? "gh-proxy 代理" : "官方")}",
+            "SETTING_CHANGED");
     }
 
     private void PersistUpdateSettings()
@@ -204,6 +236,7 @@ public partial class SettingsWindow : Window
         };
         if (dialog.ShowDialog(this) != true)
         {
+            _services.Log.Write("用户取消导出日志", "导出日志");
             return;
         }
         try
@@ -216,6 +249,7 @@ public partial class SettingsWindow : Window
             {
                 File.WriteAllText(dialog.FileName, "暂无日志记录");
             }
+            _services.Log.Write(dialog.FileName, "导出日志");
             MessageBox.Show(this, $"日志已成功导出到：\n{dialog.FileName}", "导出成功",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -230,6 +264,7 @@ public partial class SettingsWindow : Window
     {
         if (_services.Passwords.IsLocked)
         {
+            _services.Log.Write("请求解锁配置", "解锁配置");
             var passwordWindow = new PasswordWindow(_services, "密码验证", "请输入配置解锁密码：")
             {
                 Owner = this
@@ -237,6 +272,7 @@ public partial class SettingsWindow : Window
             passwordWindow.ShowDialog();
             if (passwordWindow.Verified)
             {
+                _services.Log.Write("配置已解锁", "LOCK_CHANGED");
                 MessageBox.Show(this, "已解锁！现在可以修改配置了。", "提示",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -249,7 +285,6 @@ public partial class SettingsWindow : Window
             if (result == MessageBoxResult.Yes)
             {
                 _services.Passwords.Lock();
-                _services.Log.Write("配置已锁定", "LOCK_CHANGED");
                 MessageBox.Show(this, "已锁定！修改配置需要密码验证。", "提示",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -268,11 +303,13 @@ public partial class SettingsWindow : Window
     {
         if (_services.Passwords.IsLocked)
         {
+            _services.Log.Write(LogLevel.Warn, "锁定状态下尝试修改密码", "操作被拒绝");
             MessageBox.Show(this, "请先解锁后再修改密码！", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
+        _services.Log.Write("窗口=修改密码", "打开窗口");
         var verify = new PasswordWindow(_services, "验证原密码", "请输入原密码：")
         {
             Owner = this

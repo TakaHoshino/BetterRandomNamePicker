@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024"
+     height="1024"
+     viewBox="0 0 1024 1024"
+     role="img"
+     aria-label="BetterRNP random picker icon">
+  <defs>
+    <clipPath id="appBounds">
+      <rect x="52" y="52" width="920" height="920" rx="210" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#appBounds)">
+    <!-- Charcoal app tile -->
+    <rect x="52" y="52" width="920" height="920" rx="210" fill="#2D2E2C" />
+
+    <!-- Lime diagonal beam, matching the banner -->
+    <path d="M90 742 L812 120" fill="none" stroke="#9CFF00" stroke-width="46" />
+    <path d="M136 790 L858 168" fill="none" stroke="#9CFF00" stroke-width="15" opacity=".72" />
+
+    <!-- Cyan geometric accent -->
+    <circle cx="202" cy="198" r="74" fill="#6FE5EF" />
+    <circle cx="202" cy="198" r="38" fill="#2D2E2C" />
+    <circle cx="202" cy="198" r="18" fill="#F5F6F2" />
+
+    <!-- Yellow geometric accent -->
+    <circle cx="812" cy="205" r="72" fill="#F3FF57" />
+    <circle cx="812" cy="205" r="28" fill="none" stroke="#2D2E2C" stroke-width="14" />
+
+    <!-- Central shuffle badge -->
+    <rect x="196" y="196"
+          width="632" height="632" rx="118"
+          fill="#0B9347"
+          stroke="#F5F6F2"
+          stroke-width="26" />
+
+    <!-- White shuffle arrows -->
+    <g fill="none"
+       stroke="#FFFFFF"
+       stroke-width="58"
+       stroke-linecap="square"
+       stroke-linejoin="miter">
+      <path d="M330 700 L706 324" />
+      <path d="M332 326 L470 464" />
+      <path d="M550 544 L698 692" />
+      <path d="M603 720 H724 V599" />
+      <path d="M606 302 H724 V420" />
+    </g>
+
+    <!-- Geometric random markers -->
+    <path d="M760 744 L842 744 L760 826 Z" fill="#9CFF00" />
+    <rect x="174" y="746" width="76" height="76" fill="#9CFF00" transform="rotate(12 212 784)" />
+    <circle cx="862" cy="660" r="28" fill="none" stroke="#F5F6F2" stroke-width="12" />
+
+    <!-- Subtle technical registration marks -->
+    <path d="M120 330 H176" stroke="#F5F6F2" stroke-width="8" opacity=".6" />
+    <path d="M120 330 V274" stroke="#F5F6F2" stroke-width="8" opacity=".6" />
+    <path d="M850 900 H904" stroke="#F5F6F2" stroke-width="8" opacity=".6" />
+    <path d="M904 900 V846" stroke="#F5F6F2" stroke-width="8" opacity=".6" />
+  </g>
+
+  <!-- Crisp inner border -->
+  <rect x="68" y="68"
+        width="888" height="888" rx="194"
+        fill="none"
+        stroke="#F5F6F2"
+        stroke-width="10"
+        opacity=".92" />
+</svg>
