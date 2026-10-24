@@ -1,0 +1,11 @@
+{
+  "id": "com.betterrnp.randomness-analyzer",
+  "name": "BetterRNP 随机性分析插件",
+  "version": "1.0.0",
+  "author": "BetterRNP",
+  "type": "command",
+  "assembly": "BetterRNP.RandomnessAnalyzerPlugin.dll",
+  "entryType": "BetterRNP.RandomnessAnalyzerPlugin.RandomnessAnalyzerPlugin",
+  "apiVersion": "1.0",
+  "description": "对当前方案连续抽样，使用卡方频率检验和前后依赖检验分析抽取是否均匀、独立。"
+}

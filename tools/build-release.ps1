@@ -154,6 +154,25 @@ Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination $selfContainedDi
 Copy-Item -LiteralPath (Join-Path $repo 'NOTICE') -Destination $frameworkDir -Force
 Copy-Item -LiteralPath (Join-Path $repo 'NOTICE') -Destination $selfContainedDir -Force
 
+$analyzerProject = Join-Path $repo 'examples\BetterRNP.RandomnessAnalyzerPlugin\BetterRNP.RandomnessAnalyzerPlugin.csproj'
+dotnet build $analyzerProject -c $Configuration -nologo
+if ($LASTEXITCODE -ne 0) {
+    throw 'Randomness analyzer plugin build failed.'
+}
+$analyzerOutput = Join-Path $repo "examples\BetterRNP.RandomnessAnalyzerPlugin\bin\$Configuration\net8.0-windows"
+$analyzerPackage = Join-Path $analyzerOutput 'com.betterrnp.randomness-analyzer.rnpp'
+if (-not (Test-Path -LiteralPath $analyzerPackage)) {
+    throw "Randomness analyzer package was not produced: $analyzerPackage"
+}
+$pluginAssetDir = Join-Path $artifacts 'plugins'
+New-Item -ItemType Directory -Path $pluginAssetDir -Force | Out-Null
+$analyzerAsset = Join-Path $pluginAssetDir 'com.betterrnp.randomness-analyzer.rnpp'
+Copy-Item -LiteralPath $analyzerPackage -Destination $analyzerAsset -Force
+New-Item -ItemType Directory -Path (Join-Path $frameworkDir 'plugins') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $selfContainedDir 'plugins') -Force | Out-Null
+Copy-Item -LiteralPath $analyzerPackage -Destination (Join-Path $frameworkDir 'plugins') -Force
+Copy-Item -LiteralPath $analyzerPackage -Destination (Join-Path $selfContainedDir 'plugins') -Force
+
 $frameworkZip = Join-Path $artifacts "BetterRNP_${Runtime}_framework-dependent_$tag.zip"
 $selfContainedZip = Join-Path $artifacts "BetterRNP_${Runtime}_self-contained_$tag.zip"
 Compress-Archive -Path (Join-Path $frameworkDir '*') -DestinationPath $frameworkZip -Force
@@ -168,3 +187,4 @@ if ($LASTEXITCODE -ne 0) {
 Write-Output "FRAMEWORK_ZIP $frameworkZip"
 Write-Output "SELF_CONTAINED_ZIP $selfContainedZip"
 Write-Output "PLUGIN_SDK $sdkDir"
+Write-Output "RANDOMNESS_ANALYZER_PLUGIN $analyzerAsset"

@@ -1,13 +1,18 @@
 using System.Text;
+using System.IO;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using BetterRNP.Core;
 using BetterRNP.Models;
 using BetterRNP.Modes;
 using BetterRNP.Plugins;
 using BetterRNP.PluginSdk.Models;
 using BetterRNP.PluginSdk.Packaging;
+using BetterRNP.RandomnessAnalyzerPlugin.Analysis;
+using BetterRNP.RandomnessAnalyzerPlugin.Views;
 using BetterRNP.TimerPlugin.Timing;
 using BetterRNP.TimerPlugin.Views;
 using BetterRNP.Views;
@@ -16,6 +21,11 @@ namespace BetterRNP.Tests;
 
 internal static class Program
 {
+    private const int GWL_EXSTYLE = -20;
+    private const long WS_EX_TOOLWINDOW = 0x00000080;
+    private const long WS_EX_APPWINDOW = 0x00040000;
+    private const long WS_EX_NOACTIVATE = 0x08000000;
+
     private const string JavaEncrypted =
         "aDx8MkpV81oAxN4CwTxqc+whVxg6wZnnexVhFmxR+2qhjTe92xB0aEO1";
     private const string JavaPlainHash =
@@ -43,6 +53,7 @@ internal static class Program
             RunLogTests(root);
             RunPluginTests(root);
             RunTimerPluginTests(root);
+            RunRandomnessAnalyzerTests(root);
             RunTimerEngineTests();
             RunWindowConstructionTests(root);
         }
@@ -368,6 +379,167 @@ internal static class Program
             TimerEngine.FormatTime(TimeSpan.FromSeconds(3661)) == "1:01:01");
     }
 
+    private static void RunRandomnessAnalyzerTests(string root)
+    {
+        var categories = Enumerable.Range(0, 10)
+            .Select(index => new PopulationCategory($"结果 {index}", 1))
+            .ToList();
+        var population = new PopulationDefinition("测试方案", "测试模式", false, categories);
+
+        var uniform = RandomnessAnalyzer.Analyze(
+            population,
+            100_000,
+            new Random(20261024));
+        Check("uniform random samples do not show significant frequency bias",
+            !uniform.HasSignificantDeviation && uniform.UniformityPValue > 0.01);
+        Check("uniform random samples pass the independence test",
+            uniform.IndependencePValue is > 0.01);
+
+        var biasedCounts = new long[] { 5000, 500, 500, 500, 500, 500, 500, 500, 500, 500 };
+        var biased = RandomnessAnalyzer.AnalyzeCounts(
+            population,
+            biasedCounts,
+            null,
+            biasedCounts.Sum());
+        Check("frequency analysis detects an intentionally biased distribution",
+            biased.HasSignificantDeviation && biased.UniformityPValue < 0.01);
+
+        var supplierIndex = 0;
+        var biasedSupplier = RandomnessAnalyzer.AnalyzeSupplier(
+            population,
+            () => $"结果 {(supplierIndex++ % 10 == 0 ? 1 : 0)}",
+            checked((int)biasedCounts.Sum()));
+        Check("supplier analysis tests the exact current picker implementation",
+            biasedSupplier.HasSignificantDeviation);
+
+        var uniformCounts = Enumerable.Repeat(1000L, 10).ToArray();
+        var dependentTransitions = new long[10, 10];
+        for (var from = 0; from < 10; from++)
+        {
+            dependentTransitions[from, 0] = 1000;
+        }
+        var dependent = RandomnessAnalyzer.AnalyzeCounts(
+            population,
+            uniformCounts,
+            dependentTransitions,
+            uniformCounts.Sum());
+        Check("independence analysis detects deterministic next results",
+            dependent.IndependencePValue is < 0.01 && dependent.HasSignificantDeviation);
+
+        var numberContext = new TestModeContext("数字方案", "number", numberRange: (1, 1000));
+        var binnedPopulation = RandomnessAnalyzer.CreatePopulation(numberContext);
+        Check("large number ranges are grouped into equal-width buckets",
+            binnedPopulation.IsBinned
+            && binnedPopulation.Categories.Count == RandomnessAnalyzer.NumberBucketCount
+            && binnedPopulation.TotalWeight == 1000);
+        var binnedSupplier = RandomnessAnalyzer.AnalyzeSupplier(
+            binnedPopulation,
+            () => Random.Shared.Next(1, 1001).ToString(),
+            10_000);
+        Check("binned supplier results map back into their number buckets",
+            binnedSupplier.SampleCount == 10_000
+            && binnedSupplier.Categories.Sum(category => category.Observed) == 10_000);
+
+        var mixedContext = new TestModeContext(
+            "混合方案",
+            "name_list",
+            names: new[] { "甲", "乙" },
+            numberRange: (1, 1000));
+        var currentNumberMode = RandomnessAnalyzer.CreatePopulation(mixedContext, "number");
+        Check("analysis population follows the selected mode rather than scheme type",
+            currentNumberMode.ModeLabel == "数字模式" && currentNumberMode.IsBinned);
+
+        Check("chi-square p-value stays in the probability range",
+            RandomnessAnalyzer.ChiSquarePValue(0, 1) == 1
+            && RandomnessAnalyzer.ChiSquarePValue(10, 4) is > 0 and < 1);
+        Check("chi-square p-value matches the 5% critical value",
+            Math.Abs(RandomnessAnalyzer.ChiSquarePValue(3.841, 1) - 0.05) < 0.001);
+
+        const string manifest = """
+        {
+          "id": "com.betterrnp.randomness-analyzer",
+          "name": "BetterRNP 随机性分析插件",
+          "version": "1.0.0",
+          "author": "BetterRNP",
+          "type": "command",
+          "assembly": "BetterRNP.RandomnessAnalyzerPlugin.dll",
+          "entryType": "BetterRNP.RandomnessAnalyzerPlugin.RandomnessAnalyzerPlugin",
+          "apiVersion": "1.0",
+          "description": "test"
+        }
+        """;
+        var pluginAssembly = Path.Combine(
+            AppContext.BaseDirectory,
+            "BetterRNP.RandomnessAnalyzerPlugin.dll");
+        Check("randomness analyzer plugin assembly is available", File.Exists(pluginAssembly));
+        var packagePath = Path.Combine(root, "randomness-analyzer.rnpp");
+        WritePluginPackage(packagePath, manifest, pluginAssembly);
+        Check("randomness analyzer rnpp manifest validation",
+            RnpPackager.ReadManifest(packagePath) is
+            {
+                Success: true,
+                Manifest.Id: "com.betterrnp.randomness-analyzer"
+            });
+
+        var pluginServices = AppServices.Create(Path.Combine(root, "randomness-plugin-services"));
+        using var plugins = new PluginManager(pluginServices);
+        var load = plugins.LoadFromPackage(packagePath, copyIntoPluginDirectory: false);
+        Check("randomness analyzer rnpp loads", load.Success);
+        Check("randomness analyzer registers one current-picker command",
+            plugins.Commands.Count == 1
+            && plugins.Commands[0].Title == "分析抽取随机性…");
+    }
+
+    private sealed class TestModeContext : BetterRNP.PluginSdk.Abstractions.IPluginModeContext
+    {
+        public TestModeContext(
+            string schemeName,
+            string schemeType,
+            IReadOnlyList<string>? names = null,
+            (int Min, int Max)? numberRange = null,
+            IReadOnlyList<BetterRNP.PluginSdk.Abstractions.PluginSeat>? seats = null)
+        {
+            SchemeName = schemeName;
+            SchemeType = schemeType;
+            Names = names ?? Array.Empty<string>();
+            NumberRange = numberRange;
+            Seats = seats ?? Array.Empty<BetterRNP.PluginSdk.Abstractions.PluginSeat>();
+        }
+
+        public string SchemeName { get; }
+        public string SchemeType { get; }
+        public IReadOnlyList<string> Names { get; }
+        public (int Min, int Max)? NumberRange { get; }
+        public IReadOnlyList<BetterRNP.PluginSdk.Abstractions.PluginSeat> Seats { get; }
+        public void ShowMessage(string message)
+        {
+        }
+    }
+
+    private sealed class TestPickerSnapshot
+        : BetterRNP.PluginSdk.Abstractions.IPluginPickerSnapshot
+    {
+        private readonly Func<string> _supplier;
+
+        public TestPickerSnapshot(
+            BetterRNP.PluginSdk.Abstractions.IPluginModeContext scheme,
+            string modeId,
+            string modeDisplayName,
+            Func<string> supplier)
+        {
+            Scheme = scheme;
+            ModeId = modeId;
+            ModeDisplayName = modeDisplayName;
+            _supplier = supplier;
+        }
+
+        public BetterRNP.PluginSdk.Abstractions.IPluginModeContext Scheme { get; }
+        public string ModeId { get; }
+        public string ModeDisplayName { get; }
+        public string? ValidationError => null;
+        public Func<string> CreateCandidateSupplier() => _supplier;
+    }
+
     private static void WritePluginPackage(string packagePath, string manifest, string assemblyPath)
     {
         using var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create);
@@ -556,6 +728,63 @@ internal static class Program
                 Fail($"crop window constructs ({ex.GetType().Name}: {ex.Message})");
             }
         }
+
+        var analysisWindow = new RandomnessAnalysisWindow(
+            new TestModeContext(
+                "随机性测试方案",
+                "name_list",
+                names: new[] { "张三", "李四", "王五" }));
+        try
+        {
+            analysisWindow.Show();
+            analysisWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            Check("window constructs: RandomnessAnalysisWindow",
+                analysisWindow.Title == "随机性分析");
+            analysisWindow.Close();
+        }
+        catch (Exception ex)
+        {
+            Fail($"window constructs: RandomnessAnalysisWindow ({ex.GetType().Name}: {ex.Message})");
+        }
+
+        var schemeContext = new TestModeContext(
+            "插件随机性方案",
+            "name_list",
+            names: new[] { "甲", "乙", "丙", "丁" });
+        var pickerSnapshot = new TestPickerSnapshot(
+            schemeContext,
+            "name_list",
+            "名字列表模式",
+            () => schemeContext.Names[Random.Shared.Next(schemeContext.Names.Count)]);
+        using var analyzerPlugins = new PluginManager(
+            services,
+            () => schemeContext,
+            () => pickerSnapshot);
+        var analyzerLoad = analyzerPlugins.LoadFromPackage(
+            Path.Combine(root, "randomness-analyzer.rnpp"),
+            copyIntoPluginDirectory: false);
+        if (analyzerLoad.Success && analyzerPlugins.Commands.Count == 1)
+        {
+            analyzerPlugins.ExecuteCommand(analyzerPlugins.Commands[0], analysisWindow);
+            var openedAnalysis = Application.Current.Windows
+                .Cast<Window>()
+                .Where(window => window.GetType().FullName
+                    == "BetterRNP.RandomnessAnalyzerPlugin.Views.RandomnessAnalysisWindow")
+                .ToList();
+            Check("current-picker command opens randomness analysis",
+                openedAnalysis.Count == 1);
+            foreach (var opened in openedAnalysis)
+            {
+                opened.Close();
+            }
+        }
+        else
+        {
+            Fail("current-picker command opens randomness analysis (plugin load failed)");
+        }
+
         CheckFloatingBallMenu(application, root);
         CheckCountdownDialog();
         application.Shutdown();
@@ -591,6 +820,14 @@ internal static class Program
         typeof(App).GetProperty(nameof(App.ShellWindow))!.SetValue(application, shell);
 
         var ball = new FloatingBallWindow(services, application);
+        ball.Show();
+        ball.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        var ballStyle = GetWindowLongPtr(new WindowInteropHelper(ball).Handle, GWL_EXSTYLE).ToInt64();
+        Check("floating ball is hidden from Alt+Tab",
+            (ballStyle & WS_EX_TOOLWINDOW) != 0 && (ballStyle & WS_EX_APPWINDOW) == 0);
+        Check("floating ball does not steal window focus",
+            (ballStyle & WS_EX_NOACTIVATE) != 0);
+
         var items = ball.ContextMenu.Items.OfType<MenuItem>().ToList();
         var headers = items.Select(item => item.Header?.ToString()).ToList();
         Check("floating ball menu lists plugin commands",
@@ -681,4 +918,7 @@ internal static class Program
         Check("removed plugin leaves only built-in",
             plugins.Plugins.Count == 1 && plugins.Plugins[0].BuiltIn);
     }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
 }

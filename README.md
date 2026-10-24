@@ -6,7 +6,7 @@
 
 它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 当前版本：**BetterRNP 2.1.1**
+- 当前版本：**BetterRNP 2.2.0**
 - 运行环境：**Windows 10 / 11 64 位**
 
 ## 为什么选择 BetterRNP
@@ -14,6 +14,7 @@
 - **抽取过程直观**：点击开始后结果快速滚动，再点一次停止定格，比直接弹出结果更有现场氛围。
 - **一套程序覆盖三种场景**：随机点名、随机数字、随机座位共用同一套方案与交互。
 - **现场操作方便**：主窗口可隐藏到托盘，悬浮球可置顶显示，双击即可快速抽取。
+- **演示时保持焦点**：悬浮球不会从全屏视频抢焦点；抽取结束后会自动把键盘焦点还给 PPT 放映窗口，翻页笔可以继续翻页。
 - **数据保存在本地**：名单、数字范围和座位配置加密存储，并自动维护多份备份。
 - **可按需扩展**：通过 `.rnpp` 插件增加菜单命令或自定义抽取模式。
 - **主题可定制**：支持导入图片、按窗口指定背景、遮罩和自由裁切。
@@ -109,7 +110,7 @@ Release 同时提供两种应用包：
 
 插件开发者还可以下载：
 
-- `BetterRNP.PluginSdk.1.0.0.nupkg`
+- `BetterRNP.PluginSdk.1.1.0.nupkg`
 
 ## 快速上手
 
@@ -169,10 +170,12 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 - [插件开发文档](docs/PLUGIN_SDK.md)
 - [代码签名文档](docs/CODE_SIGNING.md)
 - [日志说明](docs/LOGGING.md)
+- [BetterRNP v2.2.0 Release Note](docs/releases/v2.2.0.md)
 - [BetterRNP v2.1.1 Release Note](docs/releases/v2.1.1.md)
 - [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)
 - 插件 SDK：[src/BetterRNP.PluginSdk](src/BetterRNP.PluginSdk)
 - 示例插件：[examples/BetterRNP.DemoPlugin](examples/BetterRNP.DemoPlugin)
+- 随机性分析插件：[examples/BetterRNP.RandomnessAnalyzerPlugin](examples/BetterRNP.RandomnessAnalyzerPlugin)
 
 生成并信任默认本地开发签名：
 

@@ -4,8 +4,8 @@
 
 当前版本约定：
 
-- 主程序版本：BetterRNP 2.1.1
-- 插件 SDK 版本：`BetterRNP.PluginSdk 1.0.0`
+- 主程序版本：BetterRNP 2.2.0
+- 插件 SDK 版本：`BetterRNP.PluginSdk 1.1.0`
 - 插件 API 版本：`1.0`
 - 插件包扩展名：`.rnpp`
 - SDK 目标框架：`.NET 8`
@@ -60,7 +60,7 @@ BetterRNP 插件在宿主进程内运行，可以：
 SDK 作为 Release 附件发布：
 
 ```text
-BetterRNP.PluginSdk.1.0.0.nupkg
+BetterRNP.PluginSdk.1.1.0.nupkg
 ```
 
 下载后放入一个本地目录，例如：
@@ -368,6 +368,69 @@ context.RegisterFloatingBallCommand("count-down", "倒计时", ShowCountDown);
 - 悬浮球是宿主窗口，插件命令应自行创建需要的弹窗。宿主不会在悬浮球关闭时自动关闭插件窗口，窗口生命周期由插件在 `OnUnload` 中负责。
 
 完整的窗口型命令示例见 `examples/BetterRNP.TimerPlugin`：它在悬浮球菜单中加入“正计时”和“倒计时”，并弹出无标题栏、置顶的半透明计时窗口。
+
+### 8.3 当前方案命令（可选扩展）
+
+需要读取当前方案数据的命令可以实现为“方案命令”。该能力通过独立接口提供，原有 `IPluginContext` 保持不变，旧插件无需修改。
+
+```csharp
+void RegisterSchemeCommand(
+    string id,
+    string title,
+    Action<IPluginModeContext> action);
+```
+
+使用前先检查宿主是否支持：
+
+```csharp
+if (context is ISchemeCommandPluginContext schemeCommands)
+{
+    schemeCommands.RegisterSchemeCommand(
+        "analyze-scheme",
+        "分析当前方案…",
+        scheme => ShowAnalysis(scheme));
+}
+```
+
+命令执行时，宿主会重新读取当前选中的方案，并提供最新的名单、数字范围或座位快照。方案不存在或已损坏时命令会报错，不会使用过期快照。
+
+完整示例见 `examples/BetterRNP.RandomnessAnalyzerPlugin`：它使用卡方频率检验和前后依赖检验分析当前方案的抽取随机性。
+
+### 8.4 当前抽取模式命令（可选扩展）
+
+如果需要验证用户当前选中的具体抽取实现，而不只是方案数据，可以检测
+`ICurrentPickerPluginContext`：
+
+```csharp
+void RegisterCurrentPickerCommand(
+    string id,
+    string title,
+    Action<IPluginPickerSnapshot> action);
+```
+
+`IPluginPickerSnapshot` 包含：
+
+- 当前方案快照 `Scheme`
+- 模式 ID 与显示名
+- 当前模式的校验错误
+- `CreateCandidateSupplier()`：宿主当前实际使用的候选生成函数
+
+```csharp
+if (context is ICurrentPickerPluginContext currentPicker)
+{
+    currentPicker.RegisterCurrentPickerCommand(
+        "analyze-current-picker",
+        "分析当前抽取…",
+        snapshot =>
+        {
+            var next = snapshot.CreateCandidateSupplier();
+            // 对 next() 的实际返回值进行统计。
+        });
+}
+```
+
+该接口可以覆盖插件自定义模式。`ISchemeCommandPluginContext`、`IPluginContext`
+等现有接口均保持不变。
 
 ## 9. 注册自定义抽取模式
 

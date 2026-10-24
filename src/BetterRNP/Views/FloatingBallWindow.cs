@@ -1,7 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
+using System.Runtime.InteropServices;
 using BetterRNP.Core;
 using BetterRNP.Modes;
 
@@ -9,6 +12,11 @@ namespace BetterRNP.Views;
 
 public sealed class FloatingBallWindow : Window
 {
+    private const int GWL_EXSTYLE = -20;
+    private const long WS_EX_TOOLWINDOW = 0x00000080;
+    private const long WS_EX_APPWINDOW = 0x00040000;
+    private const long WS_EX_NOACTIVATE = 0x08000000;
+
     private readonly AppServices _services;
     private readonly App _app;
     private readonly TextBlock _label;
@@ -27,6 +35,7 @@ public sealed class FloatingBallWindow : Window
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true;
+        ShowActivated = false;
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
         Topmost = true;
@@ -58,12 +67,27 @@ public sealed class FloatingBallWindow : Window
         Top = Math.Max(0, workArea.Bottom - Height - 50);
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
+        SourceInitialized += (_, _) => HideFromAltTab();
         Closed += (_, _) =>
         {
             _app.Plugins.PluginsChanged -= OnPluginsChanged;
             _picker?.Stop();
             _picker = null;
         };
+    }
+
+    private void HideFromAltTab()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var extendedStyle = GetWindowLongPtr(handle, GWL_EXSTYLE).ToInt64();
+        extendedStyle |= WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+        extendedStyle &= ~WS_EX_APPWINDOW;
+        SetWindowLongPtr(handle, GWL_EXSTYLE, new IntPtr(extendedStyle));
     }
 
     private void OnPluginsChanged(object? sender, EventArgs e)
@@ -205,8 +229,25 @@ public sealed class FloatingBallWindow : Window
                 var result = _picker?.LastValue ?? string.Empty;
                 _services.Log.Write(
                     $"方案={scheme.Name}｜模式={mode.DisplayName}｜结果={result}", "悬浮球抽取结果");
+                RestorePresentationFocus();
             });
         _picker.Start();
+    }
+
+    private void RestorePresentationFocus()
+    {
+        if (Application.Current is App { IsShuttingDown: true })
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (PresentationFocusService.TryRestore())
+            {
+                _services.Log.Write("已恢复演示文稿放映窗口焦点", "PPT_FOCUS");
+            }
+        }), DispatcherPriority.Background);
     }
 
     private static string FormatForBall(string modeId, string value)
@@ -221,4 +262,10 @@ public sealed class FloatingBallWindow : Window
         }
         return value;
     }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr(IntPtr window, int index, IntPtr newValue);
 }

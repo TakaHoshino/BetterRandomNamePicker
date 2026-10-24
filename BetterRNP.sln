@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.DemoPlugin", "exa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.TimerPlugin", "examples\BetterRNP.TimerPlugin\BetterRNP.TimerPlugin.csproj", "{642D7190-0D68-4475-9B08-C8A4E4887799}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterRNP.RandomnessAnalyzerPlugin", "examples\BetterRNP.RandomnessAnalyzerPlugin\BetterRNP.RandomnessAnalyzerPlugin.csproj", "{B9C32A7B-5DB6-4B68-9C7D-2D5E7C0F5A11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,5 +40,9 @@ Global
 		{642D7190-0D68-4475-9B08-C8A4E4887799}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{642D7190-0D68-4475-9B08-C8A4E4887799}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{642D7190-0D68-4475-9B08-C8A4E4887799}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9C32A7B-5DB6-4B68-9C7D-2D5E7C0F5A11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9C32A7B-5DB6-4B68-9C7D-2D5E7C0F5A11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9C32A7B-5DB6-4B68-9C7D-2D5E7C0F5A11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9C32A7B-5DB6-4B68-9C7D-2D5E7C0F5A11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

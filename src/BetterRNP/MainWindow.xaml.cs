@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using BetterRNP.Core;
 using BetterRNP.Modes;
 using BetterRNP.Models;
@@ -28,7 +29,10 @@ public partial class MainWindow : Window
     {
         _services = services;
         InitializeComponent();
-        _plugins = new PluginManager(services);
+        _plugins = new PluginManager(
+            services,
+            CreateCurrentPluginModeContext,
+            CreateCurrentPickerPluginSnapshot);
         SchemeCombo.ItemsSource = _schemes;
         ModeCombo.ItemsSource = _modeNames;
         _plugins.PluginsChanged += OnPluginsChanged;
@@ -215,6 +219,23 @@ public partial class MainWindow : Window
         }
         _pickSchemeName = null;
         _pickModeName = null;
+        RestorePresentationFocus();
+    }
+
+    private void RestorePresentationFocus()
+    {
+        if (Application.Current is App { IsShuttingDown: true })
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (PresentationFocusService.TryRestore())
+            {
+                _services.Log.Write("已恢复演示文稿放映窗口焦点", "PPT_FOCUS");
+            }
+        }), DispatcherPriority.Background);
     }
 
     private void Names_Click(object sender, RoutedEventArgs e) => ShowNameConfigWindow();
@@ -395,6 +416,43 @@ public partial class MainWindow : Window
     public Scheme? SelectedScheme => CurrentScheme;
 
     public IPickMode? BuildCurrentMode() => CreateMode(ModeCombo.SelectedItem as string);
+
+    private PluginSdk.Abstractions.IPluginModeContext? CreateCurrentPluginModeContext()
+    {
+        if (CurrentScheme is not { } scheme)
+        {
+            return null;
+        }
+
+        return SchemePluginModeContext.Create(
+            _services,
+            scheme,
+            message => MessageBox.Show(
+                this,
+                message,
+                "插件提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information));
+    }
+
+    private PluginSdk.Abstractions.IPluginPickerSnapshot? CreateCurrentPickerPluginSnapshot()
+    {
+        if (CurrentScheme is not { } scheme || BuildCurrentMode() is not { } mode)
+        {
+            return null;
+        }
+
+        return SchemePluginModeContext.CreatePicker(
+            _services,
+            scheme,
+            mode,
+            message => MessageBox.Show(
+                this,
+                message,
+                "插件提示",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information));
+    }
 
     private IPickMode? CreateMode(string? displayName)
     {

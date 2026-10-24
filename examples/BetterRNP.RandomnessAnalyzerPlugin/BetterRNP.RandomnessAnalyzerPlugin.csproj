@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>BetterRNP.RandomnessAnalyzerPlugin</AssemblyName>
+    <RootNamespace>BetterRNP.RandomnessAnalyzerPlugin</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BetterRNP.PluginSdk\BetterRNP.PluginSdk.csproj" />
+  </ItemGroup>
+</Project>
