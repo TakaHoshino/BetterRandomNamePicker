@@ -398,4 +398,8 @@ public static class UiText
     public const string AllowRecoveryShortcut = "Ui.AllowRecoveryShortcut";
     public const string RecoveryShortcutHint = "Ui.RecoveryShortcutHint";
     public const string NoPasswordWarning = "Ui.NoPasswordWarning";
+    public const string RemovePassword = "Ui.RemovePassword";
+    public const string RemovePasswordConfirmation = "Ui.RemovePasswordConfirmation";
+    public const string PasswordRemoved = "Ui.PasswordRemoved";
+    public const string PasswordRemovalFailed = "Ui.PasswordRemovalFailed";
 }

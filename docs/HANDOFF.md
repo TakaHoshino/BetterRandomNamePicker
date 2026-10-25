@@ -4,7 +4,7 @@
 >
 > 当前分支：`main`
 >
-> 当前工作区：`v2.3.2` 已发布到 GitHub Releases
+> 当前工作区：`v2.3.3` 发布候选，新增鉴权后删除密码
 
 Release：
 
@@ -43,12 +43,13 @@ BetterRNP 是面向课堂、会议和活动现场的 Windows 随机抽取工具�
 11. `Ctrl+L` 备用通道默认关闭，仅在设置密码并完成鉴权后允许开启。
 12. 未设置密码时，主界面以红色小字提示名单和方案可能被未经授权修改。
 13. 软件界面和操作日志不再披露备用通道的具体按键或操作次数。
+14. 已设置密码的用户可在鉴权后删除密码；删除后恢复默认解锁并关闭备用通道。
 
 当前测试结果：
 
 - `dotnet build BetterRNP.sln --no-restore`：0 警告、0 错误。
 - `dotnet build BetterRNP.sln -c Release --no-restore`：0 警告、0 错误。
-- `dotnet run --project tests/BetterRNP.Tests/BetterRNP.Tests.csproj --no-build`：184 项通过、0 项失败。
+- `dotnet run --project tests/BetterRNP.Tests/BetterRNP.Tests.csproj --no-build`：186 项通过、0 项失败。
 - `tools/build-release.ps1`：fd/sc 发布包、随机性分析插件、SDK 1.4.0 和开发签名证书已生成。
 - GitHub Release `v2.3.2` 已发布，5 个附件均为 `uploaded` 状态。
 - `v2.3.2` 不改变设置结构或插件 API。
@@ -219,6 +220,11 @@ plugins/               .rnpp 插件
 
 - 软件安全设置和操作日志不再显示备用通道的具体按键或操作步骤。
 - 软件内只说明备用通道默认关闭，以及设置密码并鉴权后可配置。
+
+### v2.3.3
+
+- 已设置密码的用户可在完成鉴权后删除密码并停用密码保护。
+- 删除密码会同时关闭备用通道，并恢复主界面的未设密码安全警告。
 
 ## 构建与验证
 

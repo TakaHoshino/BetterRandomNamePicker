@@ -191,6 +191,11 @@ internal static class Program
         services.Passwords.Lock();
         Check("new password accepted",
             services.Passwords.VerifyAndUnlock("better-pass-2026"));
+        Check("authenticated user can remove password protection",
+            services.Passwords.RemovePassword()
+            && !services.Passwords.HasPassword
+            && !services.Passwords.IsLocked
+            && !services.Passwords.RecoveryShortcutEnabled);
 
         services.Names.SaveNames("默认方案", new[] { "张三", "李四", "王五" });
         Check("names persist through encrypted storage",
@@ -1055,7 +1060,8 @@ internal static class Program
                 ((TextBlock)settingsWindow.FindName("PasswordStatusText"))
                     .Text.Contains("未设置密码", StringComparison.Ordinal)
                 && ((CheckBox)settingsWindow.FindName("RecoveryShortcutCheck")).IsEnabled == false
-                && ((Button)settingsWindow.FindName("LockButton")).Visibility == Visibility.Collapsed);
+                && ((Button)settingsWindow.FindName("LockButton")).Visibility == Visibility.Collapsed
+                && ((Button)settingsWindow.FindName("RemovePasswordButton")).Visibility == Visibility.Collapsed);
             var radiusSlider = (Slider)settingsWindow.FindName("RadiusSlider");
             var opacitySlider = (Slider)settingsWindow.FindName("OpacitySlider");
             Check("floating ball sliders are continuous",
@@ -1204,6 +1210,10 @@ internal static class Program
         shell.RefreshLanguage();
         Check("main window hides password warning after password is set",
             noPasswordWarning.Visibility == Visibility.Collapsed);
+        services.Passwords.RemovePassword();
+        shell.RefreshLanguage();
+        Check("main window restores warning after password removal",
+            noPasswordWarning.Visibility == Visibility.Visible);
 
         var ball = new FloatingBallWindow(services, application);
         ball.Show();

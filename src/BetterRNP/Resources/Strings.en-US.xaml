@@ -237,6 +237,10 @@
     <sys:String x:Key="Ui.AllowRecoveryShortcut">Enable the recovery channel</sys:String>
     <sys:String x:Key="Ui.RecoveryShortcutHint">The recovery channel is off by default. Set a password and authenticate to change it. Keep your password safe when this channel is enabled.</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ No password is configured. Name lists and schemes may be modified without authorization. Set a password in Settings → Security.</sys:String>
+    <sys:String x:Key="Ui.RemovePassword">Remove password</sys:String>
+    <sys:String x:Key="Ui.RemovePasswordConfirmation">Remove the password and disable password protection? Name lists and schemes may then be modified without authorization.</sys:String>
+    <sys:String x:Key="Ui.PasswordRemoved">Password removed. Password protection is now disabled.</sys:String>
+    <sys:String x:Key="Ui.PasswordRemovalFailed">Could not remove the password. Try again.</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

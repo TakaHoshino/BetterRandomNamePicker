@@ -237,6 +237,10 @@
     <sys:String x:Key="Ui.AllowRecoveryShortcut">Включить резервный канал</sys:String>
     <sys:String x:Key="Ui.RecoveryShortcutHint">Резервный канал по умолчанию отключён. Задайте пароль и пройдите проверку, чтобы изменить настройку. При включении канала надёжно храните пароль.</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ Пароль не задан. Списки имён и наборы могут быть изменены без разрешения. Задайте пароль в разделе «Настройки → Безопасность».</sys:String>
+    <sys:String x:Key="Ui.RemovePassword">Удалить пароль</sys:String>
+    <sys:String x:Key="Ui.RemovePasswordConfirmation">Удалить пароль и отключить защиту? После этого списки имён и наборы можно будет изменить без разрешения.</sys:String>
+    <sys:String x:Key="Ui.PasswordRemoved">Пароль удалён. Защита паролем отключена.</sys:String>
+    <sys:String x:Key="Ui.PasswordRemovalFailed">Не удалось удалить пароль. Повторите попытку.</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

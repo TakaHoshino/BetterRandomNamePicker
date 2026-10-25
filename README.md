@@ -6,7 +6,7 @@
 
 它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 当前版本：**BetterRNP 2.3.2**
+- 当前版本：**BetterRNP 2.3.3**
 - 运行环境：**Windows 10 / 11 64 位**
 
 ## 为什么选择 BetterRNP
@@ -99,6 +99,9 @@
 BetterRNP 默认不设置密码，首次启动时配置保持解锁状态。如需防止名单、方案或设置被
 误改，可进入“设置 → 安全”，点击“设置密码”自行配置密码。设置密码后，修改受保护
 设置前需要先完成鉴权。
+
+已设置密码的用户可在同一页面点击“删除密码”，完成鉴权并确认后停用密码保护。
+删除密码会同时关闭备用解锁通道。
 
 未设置密码时，主界面会用红色小字提示名单和方案可能被未经授权修改。旧版本遗留的
 内置默认密码会在升级后自动移除。
@@ -204,6 +207,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 - [BetterRNP v2.3.0 Release Note](docs/releases/v2.3.0.md)
 - [BetterRNP v2.3.1 Release Note](docs/releases/v2.3.1.md)
 - [BetterRNP v2.3.2 Release Note](docs/releases/v2.3.2.md)
+- [BetterRNP v2.3.3 Release Note](docs/releases/v2.3.3.md)
 - [BetterRNP v2.2.0 Release Note](docs/releases/v2.2.0.md)
 - [BetterRNP v2.1.1 Release Note](docs/releases/v2.1.1.md)
 - [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)

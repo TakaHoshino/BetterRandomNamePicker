@@ -327,6 +327,10 @@
     <sys:String x:Key="Ui.AllowRecoveryShortcut">启用备用解锁通道</sys:String>
     <sys:String x:Key="Ui.RecoveryShortcutHint">备用解锁通道默认关闭。设置密码并完成鉴权后可以修改；启用后请妥善保管密码。</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ 当前未设置密码，名单和方案可能被未经授权修改。请在“设置 → 安全”中设置密码。</sys:String>
+    <sys:String x:Key="Ui.RemovePassword">删除密码</sys:String>
+    <sys:String x:Key="Ui.RemovePasswordConfirmation">确定要删除密码并停用密码保护吗？删除后，名单和方案可能被未经授权修改。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemoved">密码已删除，配置保护已停用。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemovalFailed">删除密码失败，请稍后重试。</sys:String>
     <sys:String x:Key="Ui.UpdateAvailableFormat">发现新版本 {0}</sys:String>
     <sys:String x:Key="Ui.LatestVersionFormat">已是最新版本（{0}）</sys:String>
     <sys:String x:Key="Ui.EnterUnlockPassword">请输入配置解锁密码：</sys:String>

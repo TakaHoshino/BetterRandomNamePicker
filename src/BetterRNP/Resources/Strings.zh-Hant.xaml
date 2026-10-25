@@ -237,6 +237,10 @@
     <sys:String x:Key="Ui.AllowRecoveryShortcut">啟用備用解鎖通道</sys:String>
     <sys:String x:Key="Ui.RecoveryShortcutHint">備用解鎖通道預設關閉。設定密碼並完成鑑權後可以修改；啟用後請妥善保管密碼。</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ 目前未設定密碼，名單和方案可能被未經授權修改。請在「設定 → 安全性」中設定密碼。</sys:String>
+    <sys:String x:Key="Ui.RemovePassword">刪除密碼</sys:String>
+    <sys:String x:Key="Ui.RemovePasswordConfirmation">確定要刪除密碼並停用密碼保護嗎？刪除後，名單和方案可能被未經授權修改。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemoved">密碼已刪除，設定保護已停用。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemovalFailed">刪除密碼失敗，請稍後重試。</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

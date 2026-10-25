@@ -237,6 +237,10 @@
     <sys:String x:Key="Ui.AllowRecoveryShortcut">復旧チャネルを有効にする</sys:String>
     <sys:String x:Key="Ui.RecoveryShortcutHint">復旧チャネルは既定で無効です。パスワードを設定して認証すると変更できます。有効にする場合はパスワードを安全に保管してください。</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ パスワードが未設定です。名前リストやプリセットが不正に変更される可能性があります。「設定 → セキュリティ」でパスワードを設定してください。</sys:String>
+    <sys:String x:Key="Ui.RemovePassword">パスワードを削除</sys:String>
+    <sys:String x:Key="Ui.RemovePasswordConfirmation">パスワードを削除してパスワード保護を無効にしますか？名前リストやプリセットが不正に変更される可能性があります。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemoved">パスワードを削除し、パスワード保護を無効にしました。</sys:String>
+    <sys:String x:Key="Ui.PasswordRemovalFailed">パスワードを削除できませんでした。もう一度お試しください。</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

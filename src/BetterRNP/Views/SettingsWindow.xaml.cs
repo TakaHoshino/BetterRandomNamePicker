@@ -659,6 +659,7 @@ public partial class SettingsWindow : Window
         LocalizationService.SetContent(
             ChangePasswordButton,
             hasPassword ? UiText.ChangePassword : UiText.SetPassword);
+        RemovePasswordButton.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
         RecoveryShortcutCheck.IsChecked = _services.Passwords.RecoveryShortcutEnabled;
         RecoveryShortcutCheck.IsEnabled = _services.Passwords.CanConfigureRecoveryShortcut;
     }
@@ -695,6 +696,60 @@ public partial class SettingsWindow : Window
         }
 
         new ChangePasswordWindow(_services) { Owner = this }.ShowDialog();
+        UpdateSecurityControls();
+    }
+
+    private void RemovePassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_services.Passwords.HasPassword)
+        {
+            return;
+        }
+        if (_services.Passwords.IsLocked)
+        {
+            var verify = new PasswordWindow(
+                _services,
+                UiText.PasswordVerificationTitle,
+                UiText.EnterUnlockPassword)
+            {
+                Owner = this
+            };
+            verify.ShowDialog();
+            if (!verify.Verified)
+            {
+                return;
+            }
+        }
+
+        var result = MessageBox.Show(
+            this,
+            UiText.RemovePasswordConfirmation,
+            UiText.RemovePassword,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (_services.Passwords.RemovePassword())
+        {
+            MessageBox.Show(
+                this,
+                UiText.PasswordRemoved,
+                UiText.Notice,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show(
+                this,
+                UiText.PasswordRemovalFailed,
+                UiText.Error,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
         UpdateSecurityControls();
     }
 

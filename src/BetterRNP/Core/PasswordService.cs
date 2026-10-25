@@ -111,6 +111,29 @@ public sealed class PasswordService
         return true;
     }
 
+    public bool RemovePassword()
+    {
+        if (!HasPassword)
+        {
+            return false;
+        }
+        if (IsLocked)
+        {
+            _log.Write(LogLevel.Warn, "未鉴权删除密码", "操作被拒绝");
+            return false;
+        }
+
+        _config.SetPasswordHash(null);
+        if (HasPassword)
+        {
+            return false;
+        }
+        _config.SetRecoveryShortcutEnabled(false);
+        _unlocked = true;
+        _log.Write("密码已删除，配置保护已停用", "PASSWORD_REMOVED");
+        return true;
+    }
+
     /// <summary>Keeps the compatibility recovery gesture, when explicitly enabled.</summary>
     public bool RegisterCtrlL()
     {

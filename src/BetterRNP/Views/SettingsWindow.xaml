@@ -261,6 +261,10 @@
                                         Content="{DynamicResource Ui.ChangePassword}"
                                         Style="{StaticResource SecondaryButton}"
                                         Click="ChangePassword_Click" />
+                                <Button x:Name="RemovePasswordButton"
+                                        Content="{DynamicResource Ui.RemovePassword}"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="RemovePassword_Click" />
                             </StackPanel>
                             <CheckBox x:Name="RecoveryShortcutCheck"
                                       Content="{DynamicResource Ui.AllowRecoveryShortcut}"
