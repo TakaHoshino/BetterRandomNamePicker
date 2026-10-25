@@ -4,11 +4,11 @@
 >
 > 当前分支：`main`
 >
-> 当前工作区：`v2.3.3` 发布候选，新增鉴权后删除密码
+> 当前工作区：`v2.3.3` 已发布到 GitHub Releases
 
 Release：
 
-https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.3.2
+https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.3.3
 
 ## 维护约定
 
@@ -51,8 +51,8 @@ BetterRNP 是面向课堂、会议和活动现场的 Windows 随机抽取工具�
 - `dotnet build BetterRNP.sln -c Release --no-restore`：0 警告、0 错误。
 - `dotnet run --project tests/BetterRNP.Tests/BetterRNP.Tests.csproj --no-build`：186 项通过、0 项失败。
 - `tools/build-release.ps1`：fd/sc 发布包、随机性分析插件、SDK 1.4.0 和开发签名证书已生成。
-- GitHub Release `v2.3.2` 已发布，5 个附件均为 `uploaded` 状态。
-- `v2.3.2` 不改变设置结构或插件 API。
+- GitHub Release `v2.3.3` 已发布，5 个附件均为 `uploaded` 状态。
+- `v2.3.3` 不改变设置结构或插件 API。
 
 ## 设置存储
 
