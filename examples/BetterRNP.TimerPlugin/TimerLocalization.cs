@@ -14,31 +14,41 @@ internal static class TimerLocalization
             "Restart", "Set countdown", "1 min", "3 min", "5 min", "10 min",
             "Hours", "Minutes", "Seconds", "Cancel", "Start countdown",
             "Increase", "Decrease", "Enter a countdown duration greater than 0",
-            "Countdown finished", "Countdown finished."));
+            "Countdown finished", "Countdown finished.", "Transparency",
+            "Timer plugin settings", "Timer window transparency",
+            "Dragging the slider updates running count-up and countdown windows in real time."));
         localization.RegisterTranslations("zh-Hant", Strings(
             "正計時", "倒計時", "開始", "重設", "關閉", "暫停", "繼續",
             "重新開始", "設定倒計時", "1 分鐘", "3 分鐘", "5 分鐘", "10 分鐘",
             "時", "分", "秒", "取消", "開始倒計時",
             "增加", "減少", "請輸入大於 0 的倒計時時長",
-            "倒計時結束", "倒計時結束。"));
+            "倒計時結束", "倒計時結束。", "透明度",
+            "計時外掛設定", "計時視窗透明度",
+            "拖動滑桿會即時套用到正在執行的正計時和倒計時視窗。"));
         localization.RegisterTranslations("zh-HK", Strings(
             "正計時", "倒數", "開始", "重設", "閂", "暫停", "繼續",
             "重新開始", "設定倒數", "1 分鐘", "3 分鐘", "5 分鐘", "10 分鐘",
             "時", "分", "秒", "取消", "開始倒數",
             "加", "減", "請輸入大過 0 嘅倒數時間",
-            "倒數完", "倒數完喇。"));
+            "倒數完", "倒數完喇。", "透明度",
+            "計時外掛設定", "計時視窗透明度",
+            "拖動滑桿會即時套用到正在執行嘅正計時同倒數視窗。"));
         localization.RegisterTranslations("ja-JP", Strings(
             "カウントアップ", "カウントダウン", "開始", "リセット", "閉じる", "一時停止", "再開",
             "最初からやり直す", "カウントダウン設定", "1 分", "3 分", "5 分", "10 分",
             "時", "分", "秒", "キャンセル", "カウントダウン開始",
             "増やす", "減らす", "0 より長いカウントダウン時間を入力してください",
-            "カウントダウン終了", "カウントダウンが終了しました。"));
+            "カウントダウン終了", "カウントダウンが終了しました。", "透明度",
+            "タイマープラグイン設定", "タイマーウィンドウの透明度",
+            "スライダーを動かすと、実行中のカウントアップとカウントダウンウィンドウにすぐ反映されます。"));
         localization.RegisterTranslations("ru-RU", Strings(
             "Прямой отсчёт", "Обратный отсчёт", "Старт", "Сброс", "Закрыть", "Пауза", "Продолжить",
             "Начать заново", "Настройка таймера", "1 мин", "3 мин", "5 мин", "10 мин",
             "Часы", "Минуты", "Секунды", "Отмена", "Запустить",
             "Увеличить", "Уменьшить", "Введите длительность больше 0",
-            "Таймер завершён", "Обратный отсчёт завершён."));
+            "Таймер завершён", "Обратный отсчёт завершён.", "Прозрачность",
+            "Настройки плагина таймера", "Прозрачность окон таймера",
+            "Перемещение ползунка сразу применяется к активным окнам прямого и обратного отсчёта."));
         localization.RegisterTranslations("en-US", Identity("BetterRNP Timer plugin"));
         localization.RegisterTranslations("zh-Hant", Identity("BetterRNP 計時外掛"));
         localization.RegisterTranslations("zh-HK", Identity("BetterRNP 計時外掛"));
@@ -75,7 +85,11 @@ internal static class TimerLocalization
         string decrease,
         string invalidDuration,
         string finishedTitle,
-        string finishedBody)
+        string finishedBody,
+        string transparency,
+        string settingsTitle,
+        string countdownWindowTransparency,
+        string liveTransparencyHint)
         => new(StringComparer.Ordinal)
         {
             ["正计时"] = countUp,
@@ -101,6 +115,10 @@ internal static class TimerLocalization
             ["请输入大于 0 的倒计时时长"] = invalidDuration,
             ["倒计时结束"] = finishedTitle,
             ["倒计时结束。"] = finishedBody,
+            ["透明度"] = transparency,
+            ["计时插件设置"] = settingsTitle,
+            ["计时窗口透明度"] = countdownWindowTransparency,
+            ["拖动滑块会实时应用到正在运行的正计时和倒计时窗口。"] = liveTransparencyHint,
             ["暂停（{0}）"] = $"{pause}（{{0}}）",
             ["继续（{0}）"] = $"{resume}（{{0}}）",
             ["{0}开始（{1}）"] = $"{start}（{{0}} {{1}}）",

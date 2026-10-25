@@ -2,6 +2,7 @@ using BetterRNP.PluginSdk.Abstractions;
 using BetterRNP.PluginSdk.Models;
 using BetterRNP.TimerPlugin.Timing;
 using BetterRNP.TimerPlugin.Views;
+using System.Windows.Threading;
 
 namespace BetterRNP.TimerPlugin;
 
@@ -15,12 +16,14 @@ public sealed class TimerPlugin : IPlugin
     private IPluginLocalizationContext? _localization;
     private TimerWindow? _countUp;
     private TimerWindow? _countDown;
+    private DispatcherTimer? _settingsSaveTimer;
+    private double _timerTransparencyPercent;
 
     public PluginManifest GetManifest() => new()
     {
         Id = "com.betterrnp.timer",
         Name = "BetterRNP 计时插件",
-        Version = "1.0.0",
+        Version = "1.1.0",
         Author = "BetterRNP",
         Type = PluginType.Command,
         Assembly = "BetterRNP.TimerPlugin.dll",
@@ -50,6 +53,39 @@ public sealed class TimerPlugin : IPlugin
             context.RegisterFloatingBallCommand("count-up", "正计时", ShowCountUp);
             context.RegisterFloatingBallCommand("count-down", "倒计时", ShowCountDown);
         }
+        _timerTransparencyPercent = TimerPreferences.LoadTransparencyPercent();
+        _settingsSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _settingsSaveTimer.Tick += (_, _) =>
+        {
+            _settingsSaveTimer.Stop();
+            TimerPreferences.SaveTransparencyPercent(_timerTransparencyPercent);
+        };
+        if (context is IPluginSettingsContext settings)
+        {
+            if (_localization is not null)
+            {
+                _localization.RegisterLocalizedSettingsItem(
+                    "timer-appearance",
+                    () => _localization.T("计时插件设置"),
+                    () => new TimerSettingsView(
+                        _localization,
+                        _timerTransparencyPercent,
+                        SetTimerTransparency));
+            }
+            else
+            {
+                settings.RegisterSettingsItem(
+                    "timer-appearance",
+                    "计时插件设置",
+                    () => new TimerSettingsView(
+                        null,
+                        _timerTransparencyPercent,
+                        SetTimerTransparency));
+            }
+        }
         context.Log("计时插件已加载");
     }
 
@@ -57,6 +93,9 @@ public sealed class TimerPlugin : IPlugin
     {
         CloseWindow(ref _countUp);
         CloseWindow(ref _countDown);
+        _settingsSaveTimer?.Stop();
+        TimerPreferences.SaveTransparencyPercent(_timerTransparencyPercent);
+        _settingsSaveTimer = null;
         _context?.Log("计时插件已卸载");
         _context = null;
         _localization = null;
@@ -96,7 +135,8 @@ public sealed class TimerPlugin : IPlugin
             mode,
             duration,
             message => _context?.Log(message),
-            _localization);
+            _localization,
+            _timerTransparencyPercent);
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(_countUp, window))
@@ -116,5 +156,14 @@ public sealed class TimerPlugin : IPlugin
         var target = window;
         window = null;
         target?.Close();
+    }
+
+    private void SetTimerTransparency(double value)
+    {
+        _timerTransparencyPercent = Math.Clamp(value, 0, 80);
+        _countUp?.SetTransparencyPercent(_timerTransparencyPercent);
+        _countDown?.SetTransparencyPercent(_timerTransparencyPercent);
+        _settingsSaveTimer?.Stop();
+        _settingsSaveTimer?.Start();
     }
 }

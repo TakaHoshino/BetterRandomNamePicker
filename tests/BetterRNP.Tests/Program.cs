@@ -464,7 +464,7 @@ internal static class Program
         {
           "id": "com.betterrnp.timer",
           "name": "BetterRNP 计时插件",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "author": "BetterRNP",
           "type": "command",
           "assembly": "BetterRNP.TimerPlugin.dll",
@@ -487,6 +487,9 @@ internal static class Program
         Check("timer rnpp loads", load.Success);
         Check("timer plugin registers two floating ball commands",
             plugins.FloatingBallCommands.Count == 2);
+        Check("timer plugin registers settings page",
+            plugins.SettingsItems.Count == 1
+            && plugins.SettingsItems[0].ViewFactory() is FrameworkElement);
         Check("floating ball command titles are 正计时 and 倒计时",
             plugins.FloatingBallCommands.Select(command => command.Title)
                 .SequenceEqual(new[] { "正计时", "倒计时" }));
@@ -979,6 +982,7 @@ internal static class Program
                 Fail($"window constructs: {window.GetType().Name} ({ex.GetType().Name}: {ex.Message})");
             }
         }
+        CheckTimerTransparency();
 
         var settingsServices = AppServices.Create(Path.Combine(root, "settings-layout"));
         using var settingsPlugins = new PluginManager(settingsServices);
@@ -1189,6 +1193,64 @@ internal static class Program
         var picked = setup.PickDuration();
         Check("countdown dialog confirms the default five minutes",
             picked == TimeSpan.FromMinutes(5));
+    }
+
+    private static void CheckTimerTransparency()
+    {
+        var countUp = new TimerWindow(
+            TimerMode.CountUp,
+            TimeSpan.Zero,
+            initialTransparencyPercent: 25);
+        var countDown = new TimerWindow(
+            TimerMode.CountDown,
+            TimeSpan.FromMinutes(1),
+            initialTransparencyPercent: 25);
+        var settingsView = new TimerSettingsView(
+            null,
+            countDown.TransparencyPercent,
+            value =>
+            {
+                countUp.SetTransparencyPercent(value);
+                countDown.SetTransparencyPercent(value);
+            });
+        try
+        {
+            countUp.Show();
+            countDown.Show();
+            countDown.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var slider = settingsView.TransparencySlider;
+            Check("timer windows share a continuous transparency slider",
+                !slider.IsSnapToTickEnabled
+                && slider.Minimum == 0
+                && slider.Maximum == 80);
+            Check("both timer windows apply initial transparency",
+                Math.Abs(countUp.Opacity - 0.75) < 0.001
+                && Math.Abs(countDown.Opacity - 0.75) < 0.001);
+            slider.Value = 40;
+            countDown.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            Check("shared transparency updates both live timer windows",
+                Math.Abs(countUp.Opacity - 0.60) < 0.001
+                && Math.Abs(countDown.Opacity - 0.60) < 0.001);
+            Check("timer windows no longer embed a transparency slider",
+                countUp.FindName("TimerTransparencySlider") is null
+                && countDown.FindName("TimerTransparencySlider") is null);
+            countUp.Close();
+            countDown.Close();
+        }
+        catch (Exception ex)
+        {
+            countUp.Close();
+            countDown.Close();
+            Fail($"timer transparency ({ex.GetType().Name}: {ex.Message})");
+        }
+        finally
+        {
+            settingsView.Dispose();
+        }
     }
 
     private static void CheckFloatingBallMenu(App application, string root)

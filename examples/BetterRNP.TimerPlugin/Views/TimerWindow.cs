@@ -27,12 +27,14 @@ public sealed class TimerWindow : Window
     private readonly DispatcherTimer _ticker;
     private readonly Action<string>? _log;
     private readonly IPluginLocalizationContext? _localization;
+    private double _transparencyPercent;
 
     public TimerWindow(
         TimerMode mode,
         TimeSpan duration,
         Action<string>? log = null,
-        IPluginLocalizationContext? localization = null)
+        IPluginLocalizationContext? localization = null,
+        double? initialTransparencyPercent = null)
     {
         _engine = new TimerEngine(mode, duration);
         _log = log;
@@ -92,6 +94,8 @@ public sealed class TimerWindow : Window
         body.Children.Add(BuildHeader());
         body.Children.Add(_timeText);
         body.Children.Add(buttons);
+        SetTransparencyPercent(
+            initialTransparencyPercent ?? TimerPreferences.LoadTransparencyPercent());
 
         var host = Ui.ShadowHost(Ui.Card(body, new Thickness(16, 10, 16, 14)));
         Content = host;
@@ -117,6 +121,14 @@ public sealed class TimerWindow : Window
         };
         Ui.CenterOnScreen(this);
         Render();
+    }
+
+    public double TransparencyPercent => _transparencyPercent;
+
+    public void SetTransparencyPercent(double value)
+    {
+        _transparencyPercent = Math.Clamp(value, 0, 80);
+        Opacity = 1 - _transparencyPercent / 100d;
     }
 
     /// <summary>立即开始计时（倒计时选好时长后直接走这一步）。</summary>
