@@ -52,7 +52,7 @@ BetterRNP 是面向课堂、会议和活动现场的 Windows 随机抽取工具�
 - `dotnet build BetterRNP.sln -c Release --no-restore`：0 警告、0 错误。
 - `dotnet run --project tests/BetterRNP.Tests/BetterRNP.Tests.csproj --no-build`：191 项通过、0 项失败。
 - `tools/build-release.ps1`：fd/sc 发布包、随机性分析插件、SDK 1.4.0 和开发签名证书已生成。
-- GitHub Release `v2.3.3` 已发布，5 个附件均为 `uploaded` 状态。
+- GitHub Release `v2.3.3` 已发布，6 个附件均为 `uploaded` 状态；包含计时插件 1.1.0。
 - `v2.3.3` 不改变设置结构或插件 API。
 
 ## 设置存储
@@ -226,6 +226,7 @@ plugins/               .rnpp 插件
 
 - 已设置密码的用户可在完成鉴权后删除密码并停用密码保护。
 - 删除密码会同时关闭备用通道，并恢复主界面的未设密码安全警告。
+- 追加计时插件 1.1.0，正计时与倒计时共用应用设置页中的连续透明度滑块。
 
 ## 构建与验证
 
