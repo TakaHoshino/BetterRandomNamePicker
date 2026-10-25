@@ -26,6 +26,18 @@ Hosts can additionally implement `ICurrentPickerPluginContext`. Its
 containing the selected mode and the exact host candidate supplier, including
 custom plugin modes.
 
+Plugins can contribute pages to the host settings window through
+`IPluginSettingsContext.RegisterSettingsItem`. The view factory is invoked on
+the UI thread and should return an embeddable WPF `FrameworkElement`.
+
+`IFloatingBallStateContext` exposes the floating ball's current position and
+size in physical screen pixels, its `#RRGGBB` background color, visibility,
+and a change event for live overlays or diagnostics.
+
+`IPluginLocalizationContext` provides per-plugin translation dictionaries,
+language-change notifications, translation lookup, and dynamically localized
+command and settings titles.
+
 The generated package contains the manifest, the entry assembly and other
 runtime dependencies from the plugin output. `BetterRNP.dll`,
 `BetterRNP.exe` and `BetterRNP.PluginSdk.dll` are intentionally excluded

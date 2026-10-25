@@ -1,7 +1,7 @@
 <Window x:Class="BetterRNP.Views.NumberSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="BetterRNP - 数字抽取设置"
+        Title="{DynamicResource Ui.BetterrnpNumberSettings}"
         Width="480"
         Height="390"
         MinWidth="440"
@@ -23,13 +23,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="最小值"
+                <TextBlock Text="{DynamicResource Ui.Minimum}"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0"
                            Foreground="{StaticResource MutedBrush}" />
                 <TextBox x:Name="MinInput" Grid.Column="1" />
                 <TextBlock Grid.Column="2"
-                           Text="最大值"
+                           Text="{DynamicResource Ui.Maximum}"
                            VerticalAlignment="Center"
                            Margin="18,0,10,0"
                            Foreground="{StaticResource MutedBrush}" />
@@ -44,7 +44,7 @@
                 BorderThickness="1"
                 CornerRadius="0">
             <TextBlock x:Name="ResultText"
-                       Text="设置数字范围后可进行抽取"
+                       Text="{DynamicResource Ui.SetANumberRangeToStartPicking}"
                        FontSize="28"
                        FontWeight="SemiBold"
                        TextAlignment="Center"
@@ -56,13 +56,13 @@
 
         <UniformGrid Grid.Row="2" Columns="3">
             <Button x:Name="PickButton"
-                    Content="开始抽取"
+                    Content="{DynamicResource Ui.Start}"
                     Style="{StaticResource PrimaryButton}"
                     Click="Pick_Click" />
-            <Button Content="保存设置"
+            <Button Content="{DynamicResource Ui.SaveSettings}"
                     Style="{StaticResource SecondaryButton}"
                     Click="Save_Click" />
-            <Button Content="应用到方案"
+            <Button Content="{DynamicResource Ui.ApplyToScheme}"
                     Style="{StaticResource SecondaryButton}"
                     Click="Apply_Click" />
         </UniformGrid>

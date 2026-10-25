@@ -70,6 +70,8 @@ public partial class MainWindow : Window
             {
                 _schemes.Add(scheme);
             }
+            SchemeCombo.ItemsSource = null;
+            SchemeCombo.ItemsSource = _schemes;
 
             var match = _schemes.FirstOrDefault(s => s.Name == selected)
                 ?? _schemes.FirstOrDefault(s => s.Name == _services.Config.LastScheme)
@@ -94,9 +96,9 @@ public partial class MainWindow : Window
         _services.Config.SetLastScheme(CurrentScheme.Name);
         var targetMode = CurrentScheme.Type switch
         {
-            Scheme.NumberType => "数字模式",
-            Scheme.SeatType => "座位模式",
-            _ => "名字列表模式"
+            Scheme.NumberType => LocalizationService.Get(UiText.Numbers),
+            Scheme.SeatType => LocalizationService.Get(UiText.Seats),
+            _ => LocalizationService.Get(UiText.NameList)
         };
         _suppressEvents = true;
         ModeCombo.SelectedItem = targetMode;
@@ -135,12 +137,12 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(text))
         {
             button.Visibility = Visibility.Collapsed;
-            button.Content = string.Empty;
+            LocalizationService.SetContent(button, string.Empty);
         }
         else
         {
             button.Visibility = Visibility.Visible;
-            button.Content = text;
+            LocalizationService.SetContent(button, text);
         }
     }
 
@@ -148,8 +150,8 @@ public partial class MainWindow : Window
     {
         var modeName = ModeCombo.SelectedItem as string;
         DisplayText.Text = string.IsNullOrWhiteSpace(modeName)
-            ? "请选择方案和模式后开始抽取"
-            : $"{modeName}: 点击开始抽取";
+            ? LocalizationService.Get(UiText.SelectASchemeAndModeToStartPicking)
+            : $"{LocalizationService.T(modeName)}: {LocalizationService.Get(UiText.ClickStartToPick)}";
     }
 
     private void Pick_Click(object sender, RoutedEventArgs e)
@@ -169,13 +171,13 @@ public partial class MainWindow : Window
         var scheme = CurrentScheme;
         if (scheme is null)
         {
-            MessageBox.Show(this, "请选择一个方案！", "提示",
+            MessageBox.Show(this, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (_currentMode is null)
         {
-            MessageBox.Show(this, "请选择抽取模式！", "提示",
+            MessageBox.Show(this, UiText.PleaseSelectPickerMode, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -188,14 +190,14 @@ public partial class MainWindow : Window
                 $"方案={scheme.Name}｜模式={_currentMode.DisplayName}｜原因={blockReason}",
                 "抽取被拦截");
             MessageBox.Show(this, blockReason,
-                _currentMode.Id == "name_list" ? "错误" : "提示",
+                _currentMode.Id == "name_list" ? UiText.Error : UiText.Notice,
                 MessageBoxButton.OK,
                 _currentMode.Id == "name_list" ? MessageBoxImage.Error : MessageBoxImage.Warning);
             return;
         }
 
         _isPicking = true;
-        PickButton.Content = "停止";
+        LocalizationService.SetContent(PickButton, UiText.Stop);
         _pickSchemeName = scheme.Name;
         _pickModeName = _currentMode.DisplayName;
         _rollingPicker = new RollingPicker(
@@ -209,7 +211,7 @@ public partial class MainWindow : Window
     private void StopPicking()
     {
         _isPicking = false;
-        PickButton.Content = "开始抽取";
+        LocalizationService.SetContent(PickButton, UiText.Start);
         _rollingPicker?.Stop();
         _rollingPicker = null;
         if (_pickSchemeName is not null && _pickModeName is not null)
@@ -274,7 +276,21 @@ public partial class MainWindow : Window
     public void RefreshFloatingBallButton()
     {
         var app = Application.Current as App;
-        FloatingButton.Content = app?.IsFloatingBallVisible == true ? "隐藏悬浮球" : "悬浮球";
+        LocalizationService.SetContent(
+            FloatingButton,
+            app?.IsFloatingBallVisible == true
+                ? UiText.HideFloatingBall
+                : UiText.FloatingBall);
+    }
+
+    public void RefreshLanguage()
+    {
+        var modeId = _currentMode?.Id;
+        LoadSchemes(CurrentScheme?.Name);
+        RefreshModeNames(null, modeId);
+        UpdateModeSpecificButtons();
+        UpdateDisplayText();
+        RefreshPluginMenu();
     }
 
     private void ModeButton1_Click(object sender, RoutedEventArgs e)
@@ -288,7 +304,10 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _services.Log.WriteException("MODE_ACTION_ERROR", ex);
-            MessageBox.Show(this, $"模式按钮操作异常：{ex.Message}", "提示",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ModeButtonErrorFormat, ex.Message),
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -304,7 +323,10 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _services.Log.WriteException("MODE_ACTION_ERROR", ex);
-            MessageBox.Show(this, $"模式按钮操作异常：{ex.Message}", "提示",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ModeButtonErrorFormat, ex.Message),
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -312,10 +334,7 @@ public partial class MainWindow : Window
     private void About_Click(object sender, RoutedEventArgs e)
     {
         _services.Log.Write("窗口=关于", "打开窗口");
-        MessageBox.Show(this,
-            "BetterRNP\n\n.NET 8 / C# / WPF 随机点名、随机数字与随机座位抽取工具。\n"
-            + "托盘菜单使用 Windows 原生 Shell_NotifyIcon 与 TrackPopupMenu 实现。",
-            "关于 BetterRNP", MessageBoxButton.OK, MessageBoxImage.Information);
+        new AboutWindow { Owner = this }.ShowDialog();
     }
 
     private void ShowLog_Click(object sender, RoutedEventArgs e) => LogWindow.ShowFor(this, _services);
@@ -352,7 +371,7 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() =>
         {
             RefreshPluginMenu();
-            RefreshModeNames(ModeCombo.SelectedItem as string);
+            RefreshModeNames(ModeCombo.SelectedItem as string, _currentMode?.Id);
             UpdateModeSpecificButtons();
         });
     }
@@ -360,7 +379,7 @@ public partial class MainWindow : Window
     private void RefreshPluginMenu()
     {
         PluginsMenu.Items.Clear();
-        var managerItem = new MenuItem { Header = "插件管理…" };
+        var managerItem = new MenuItem { Header = LocalizationService.Get(UiText.ManagePlugins) };
         managerItem.Click += (_, _) =>
         {
             _services.Log.Write("窗口=插件管理", "打开窗口");
@@ -376,22 +395,22 @@ public partial class MainWindow : Window
         PluginsMenu.Items.Add(new Separator());
         foreach (var command in commands)
         {
-            var item = new MenuItem { Header = command.Title };
+            var item = new MenuItem { Header = command.DisplayTitle };
             item.Click += (_, _) => _plugins.ExecuteCommand(command, this);
             PluginsMenu.Items.Add(item);
         }
     }
 
-    private void RefreshModeNames(string? preferred)
+    private void RefreshModeNames(string? preferred, string? preferredModeId = null)
     {
         var previous = preferred ?? ModeCombo.SelectedItem as string;
         _suppressEvents = true;
         try
         {
             _modeNames.Clear();
-            _modeNames.Add("名字列表模式");
-            _modeNames.Add("数字模式");
-            _modeNames.Add("座位模式");
+            _modeNames.Add(LocalizationService.Get(UiText.NameList));
+            _modeNames.Add(LocalizationService.Get(UiText.Numbers));
+            _modeNames.Add(LocalizationService.Get(UiText.Seats));
             foreach (var registration in _plugins.Modes)
             {
                 if (!_modeNames.Contains(registration.Mode.DisplayName))
@@ -399,9 +418,21 @@ public partial class MainWindow : Window
                     _modeNames.Add(registration.Mode.DisplayName);
                 }
             }
-            ModeCombo.SelectedItem = previous is not null && _modeNames.Contains(previous)
-                ? previous
-                : _modeNames[0];
+            var target = preferredModeId switch
+            {
+                "name_list" => LocalizationService.Get(UiText.NameList),
+                "number" => LocalizationService.Get(UiText.Numbers),
+                "seat" => LocalizationService.Get(UiText.Seats),
+                not null => _plugins.Modes
+                    .FirstOrDefault(mode => mode.Mode.Id == preferredModeId)
+                    ?.Mode.DisplayName,
+                _ => null
+            };
+            ModeCombo.SelectedItem = target is not null && _modeNames.Contains(target)
+                ? target
+                : previous is not null && _modeNames.Contains(previous)
+                    ? previous
+                    : _modeNames[0];
         }
         finally
         {
@@ -430,7 +461,7 @@ public partial class MainWindow : Window
             message => MessageBox.Show(
                 this,
                 message,
-                "插件提示",
+                UiText.PluginNotice,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information));
     }
@@ -449,7 +480,7 @@ public partial class MainWindow : Window
             message => MessageBox.Show(
                 this,
                 message,
-                "插件提示",
+                UiText.PluginNotice,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information));
     }
@@ -462,11 +493,11 @@ public partial class MainWindow : Window
         }
         switch (displayName)
         {
-            case "数字模式":
+            case var modeName when modeName == LocalizationService.Get(UiText.Numbers):
                 return new NumberMode(_services, () => CurrentScheme);
-            case "座位模式":
+            case var modeName when modeName == LocalizationService.Get(UiText.Seats):
                 return new SeatMode(_services, () => CurrentScheme);
-            case "名字列表模式":
+            case var modeName when modeName == LocalizationService.Get(UiText.NameList):
                 return new NameListMode(_services, () => CurrentScheme);
         }
 
@@ -487,7 +518,7 @@ public partial class MainWindow : Window
     public void ShowSettingsWindow()
     {
         _services.Log.Write("窗口=系统设置", "打开窗口");
-        new SettingsWindow(_services) { Owner = this }.ShowDialog();
+        new SettingsWindow(_services, _plugins) { Owner = this }.ShowDialog();
         ThemeEnabledItem.IsChecked = _services.Theme.IsEnabled;
     }
 

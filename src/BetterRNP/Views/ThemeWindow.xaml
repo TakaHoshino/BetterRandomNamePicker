@@ -1,7 +1,7 @@
 <Window x:Class="BetterRNP.Views.ThemeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="BetterRNP - 背景主题设置"
+        Title="{DynamicResource Ui.BetterrnpBackgroundTheme}"
         Width="960"
         Height="690"
         MinWidth="800"
@@ -17,16 +17,16 @@
         <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="14">
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="EnabledCheck"
-                          Content="启用照片背景"
+                          Content="{DynamicResource Ui.EnablePhotoBackground}"
                           VerticalAlignment="Center"
                           Click="Enabled_Click" />
-                <Button Content="导入图片…"
+                <Button Content="{DynamicResource Ui.ImportImage}"
                         Style="{StaticResource SecondaryButton}"
                         Click="Import_Click" />
-                <Button Content="删除选中图片"
+                <Button Content="{DynamicResource Ui.DeleteSelectedImage}"
                         Style="{StaticResource SecondaryButton}"
                         Click="Delete_Click" />
-                <Button Content="恢复默认"
+                <Button Content="{DynamicResource Ui.RestoreDefaults2}"
                         Style="{StaticResource SecondaryButton}"
                         Click="Reset_Click" />
             </StackPanel>
@@ -46,7 +46,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="图片库"
+                    <TextBlock Text="{DynamicResource Ui.ImageLibrary}"
                                FontSize="17"
                                FontWeight="SemiBold"
                                Margin="4,0,0,8" />
@@ -69,7 +69,7 @@
                                             BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
                                             BorderThickness="1">
                                         <Grid>
-                                            <TextBlock Text="无预览"
+                                            <TextBlock Text="{DynamicResource Ui.NoPreview}"
                                                        FontSize="11"
                                                        Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
                                                        HorizontalAlignment="Center"
@@ -120,7 +120,7 @@
                     Style="{StaticResource CardStyle}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="全局背景"
+                        <TextBlock Text="{DynamicResource Ui.GlobalBackground}"
                                    FontSize="17"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,8" />
@@ -135,14 +135,14 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="图片"
+                            <TextBlock Text="{DynamicResource Ui.Image}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,12,0" />
                             <ComboBox x:Name="GlobalImageCombo"
                                       Grid.Column="1"
                                       SelectionChanged="GlobalImage_SelectionChanged" />
                             <TextBlock Grid.Row="1"
-                                       Text="适配"
+                                       Text="{DynamicResource Ui.Fit}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,12,0" />
                             <ComboBox x:Name="GlobalModeCombo"
@@ -151,12 +151,12 @@
                                       SelectionChanged="GlobalMode_SelectionChanged" />
                             <Button Grid.Row="1"
                                     Grid.Column="2"
-                                    Content="裁切…"
+                                    Content="{DynamicResource Ui.Crop2}"
                                     Style="{StaticResource SecondaryButton}"
                                     Margin="8,3,0,3"
                                     Click="GlobalCrop_Click" />
                             <TextBlock Grid.Row="2"
-                                       Text="遮罩"
+                                       Text="{DynamicResource Ui.Mask}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,12,0" />
                             <StackPanel Grid.Row="2"
@@ -176,7 +176,7 @@
 
                         <Separator Margin="0,18" />
 
-                        <TextBlock Text="按窗口类别指定"
+                        <TextBlock Text="{DynamicResource Ui.PerWindowCategory}"
                                    FontSize="17"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,8" />
@@ -189,11 +189,11 @@
                                      Grid.Column="0"
                                      SelectionChanged="CategoryList_SelectionChanged" />
                             <StackPanel Grid.Column="1" Margin="14,0,0,0">
-                                <TextBlock Text="图片（“继承全局”表示使用全局图片）"
+                                <TextBlock Text="{DynamicResource Ui.ImageInheritGlobalUsesTheGlobalImage}"
                                            Foreground="{StaticResource MutedBrush}" />
                                 <ComboBox x:Name="CategoryImageCombo"
                                           SelectionChanged="CategoryImage_SelectionChanged" />
-                                <TextBlock Text="适配模式"
+                                <TextBlock Text="{DynamicResource Ui.FitMode}"
                                            Foreground="{StaticResource MutedBrush}"
                                            Margin="0,8,0,0" />
                                 <Grid>
@@ -204,12 +204,12 @@
                                     <ComboBox x:Name="CategoryModeCombo"
                                               SelectionChanged="CategoryMode_SelectionChanged" />
                                     <Button Grid.Column="1"
-                                            Content="裁切…"
+                                            Content="{DynamicResource Ui.Crop2}"
                                             Style="{StaticResource SecondaryButton}"
                                             Margin="8,3,0,3"
                                             Click="CategoryCrop_Click" />
                                 </Grid>
-                                <Button Content="清除该类别设置"
+                                <Button Content="{DynamicResource Ui.ClearCategorySettings}"
                                         Style="{StaticResource SecondaryButton}"
                                         HorizontalAlignment="Left"
                                         Margin="0,12,0,0"
@@ -224,11 +224,11 @@
         <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right">
-            <TextBlock Text="所有修改即时应用并保存"
+            <TextBlock Text="{DynamicResource Ui.AllChangesAreAppliedAndSavedImmediately}"
                        Foreground="{StaticResource MutedBrush}"
                        VerticalAlignment="Center"
                        Margin="0,0,14,0" />
-            <Button Content="关闭"
+            <Button Content="{DynamicResource Ui.Close}"
                     Style="{StaticResource SecondaryButton}"
                     MinWidth="110"
                     Click="Close_Click" />

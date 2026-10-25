@@ -9,149 +9,106 @@ public sealed class ConfigService
     private const int FloatingBallOpacityMinimum = 0;
     private const int FloatingBallOpacityMaximum = 255;
 
-    private readonly AppPaths _paths;
+    private readonly ISettingsStore _settings;
     private readonly LogService _log;
-    private readonly string _backupPath;
-    private JavaProperties _properties;
 
-    public ConfigService(AppPaths paths, LogService log)
+    public ConfigService(ISettingsStore settings, LogService log)
     {
-        _paths = paths;
+        _settings = settings;
         _log = log;
-        _backupPath = Path.Combine(paths.LogDir, "config.properties.bak");
-        _properties = Load();
     }
 
-    public string? PasswordHash => _properties.Get(PasswordHashKey);
-    public bool AutoStart => GetBool("autoStart", false);
-    public bool MinimizeToTray => GetBool("minimizeToTray", true);
-    public bool AutoShowFloatingBall => GetBool("autoShowFloatingBall", false);
-    public string LastScheme => _properties.Get("lastScheme", string.Empty) ?? string.Empty;
+    public string? PasswordHash => _settings.GetString(SettingsSections.Security, "PasswordHash");
 
-    public int FloatingBallRadius
-    {
-        get
-        {
-            var value = ParseInt(_properties.Get("floatingBallRadius"), FloatingBallRadiusDefault);
-            return Math.Max(FloatingBallRadiusMinimum, value);
-        }
-    }
+    public string Language => LocalizationService.NormalizeLanguage(
+        _settings.GetString(SettingsSections.General, "language")
+        ?? System.Globalization.CultureInfo.CurrentUICulture.Name);
 
-    public int FloatingBallOpacity
-    {
-        get
-        {
-            var value = ParseInt(_properties.Get("floatingBallOpacity"), FloatingBallOpacityDefault);
-            return Math.Clamp(value, FloatingBallOpacityMinimum, FloatingBallOpacityMaximum);
-        }
-    }
+    public bool AutoStart => _settings.GetBoolean(
+        SettingsSections.General,
+        "autoStart",
+        fallback: false);
 
-    public void SetAutoStart(bool value) => SetBool("autoStart", value);
-    public void SetMinimizeToTray(bool value) => SetBool("minimizeToTray", value);
-    public void SetAutoShowFloatingBall(bool value) => SetBool("autoShowFloatingBall", value);
+    public bool MinimizeToTray => _settings.GetBoolean(
+        SettingsSections.General,
+        "minimizeToTray",
+        fallback: true);
+
+    public bool AutoShowFloatingBall => _settings.GetBoolean(
+        SettingsSections.General,
+        "autoShowFloatingBall",
+        fallback: false);
+
+    public string LastScheme
+        => _settings.GetString(SettingsSections.General, "lastScheme") ?? string.Empty;
+
+    public int FloatingBallRadius => Math.Max(
+        FloatingBallRadiusMinimum,
+        _settings.GetInt32(
+            SettingsSections.FloatingBall,
+            "floatingBallRadius") ?? FloatingBallRadiusDefault);
+
+    public int FloatingBallOpacity => Math.Clamp(
+        _settings.GetInt32(
+            SettingsSections.FloatingBall,
+            "floatingBallOpacity") ?? FloatingBallOpacityDefault,
+        FloatingBallOpacityMinimum,
+        FloatingBallOpacityMaximum);
+
+    public void SetAutoStart(bool value)
+        => SetBoolean(SettingsSections.General, "autoStart", value);
+
+    public void SetMinimizeToTray(bool value)
+        => SetBoolean(SettingsSections.General, "minimizeToTray", value);
+
+    public void SetAutoShowFloatingBall(bool value)
+        => SetBoolean(SettingsSections.General, "autoShowFloatingBall", value);
+
+    public void SetLanguage(string languageCode)
+        => Persist(() => _settings.SetString(
+            SettingsSections.General,
+            "language",
+            LocalizationService.NormalizeLanguage(languageCode)));
 
     public void SetLastScheme(string value)
-    {
-        _properties.Set("lastScheme", string.IsNullOrWhiteSpace(value) ? null : value);
-        Save();
-    }
+        => Persist(() => _settings.SetString(
+            SettingsSections.General,
+            "lastScheme",
+            string.IsNullOrWhiteSpace(value) ? null : value));
 
     public void SetFloatingBallRadius(int value)
-    {
-        _properties.Set("floatingBallRadius", Math.Max(FloatingBallRadiusMinimum, value).ToString());
-        Save();
-    }
+        => Persist(() => _settings.SetInt32(
+            SettingsSections.FloatingBall,
+            "floatingBallRadius",
+            Math.Max(FloatingBallRadiusMinimum, value)));
 
     public void SetFloatingBallOpacity(int value)
-    {
-        _properties.Set("floatingBallOpacity",
-            Math.Clamp(value, FloatingBallOpacityMinimum, FloatingBallOpacityMaximum).ToString());
-        Save();
-    }
+        => Persist(() => _settings.SetInt32(
+            SettingsSections.FloatingBall,
+            "floatingBallOpacity",
+            Math.Clamp(value, FloatingBallOpacityMinimum, FloatingBallOpacityMaximum)));
 
     public void SetPasswordHash(string hash)
-    {
-        _properties.Set(PasswordHashKey, hash);
-        Save();
-        File.Copy(_paths.ConfigFile, _backupPath, true);
-    }
+        => Persist(() => _settings.SetString(
+            SettingsSections.Security,
+            "PasswordHash",
+            hash));
 
     public void Save()
+        => Persist(_settings.MarkCurrentSchema);
+
+    private void SetBoolean(string section, string name, bool value)
+        => Persist(() => _settings.SetBoolean(section, name, value));
+
+    private void Persist(Action write)
     {
         try
         {
-            Directory.CreateDirectory(_paths.LogDir);
-            if (File.Exists(_paths.ConfigFile))
-            {
-                File.Copy(_paths.ConfigFile, _backupPath, true);
-            }
-
-            _properties.WriteWithSections(
-                _paths.ConfigFile,
-                new[]
-                {
-                    "BetterRNP 配置（UTF-8，可手工编辑）",
-                    $"生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                    $"上一版备份：{_backupPath}（主文件缺失时会自动从它恢复）",
-                    "主题设置位于 data/themes/theme.properties。"
-                },
-                new (string, IEnumerable<string>)[]
-                {
-                    ("启动与窗口", new[]
-                    {
-                        "autoStart", "minimizeToTray", "autoShowFloatingBall", "lastScheme"
-                    }),
-                    ("悬浮球", new[] { "floatingBallRadius", "floatingBallOpacity" }),
-                    ("安全（密码散列，请勿手工修改）", new[] { PasswordHashKey })
-                });
+            write();
         }
         catch (Exception ex)
         {
             _log.Write(LogLevel.Error, $"保存配置失败: {ex.Message}", "CONFIG_SAVE_ERROR");
         }
     }
-
-    private JavaProperties Load()
-    {
-        try
-        {
-            if (!File.Exists(_paths.ConfigFile) && File.Exists(_backupPath))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(_paths.ConfigFile)!);
-                File.Copy(_backupPath, _paths.ConfigFile, true);
-                _log.Write($"配置主文件缺失，已从备份恢复: {_backupPath}", "CONFIG_RESTORE");
-            }
-
-            var result = JavaProperties.Load(_paths.ConfigFile);
-            if (!File.Exists(_paths.ConfigFile))
-            {
-                result.Set("autoStart", "false");
-                result.Set("minimizeToTray", "true");
-                result.Set("autoShowFloatingBall", "false");
-                result.Set("floatingBallRadius", FloatingBallRadiusDefault.ToString());
-                result.Set("floatingBallOpacity", FloatingBallOpacityDefault.ToString());
-                _properties = result;
-                Save();
-                _log.Write("配置文件已自动创建", "CONFIG_CREATE");
-            }
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _log.Write(LogLevel.Error, $"读取配置失败: {ex.Message}", "CONFIG_LOAD_ERROR");
-            return new JavaProperties();
-        }
-    }
-
-    private bool GetBool(string key, bool fallback)
-        => bool.TryParse(_properties.Get(key), out var value) ? value : fallback;
-
-    private void SetBool(string key, bool value)
-    {
-        _properties.Set(key, value.ToString().ToLowerInvariant());
-        Save();
-    }
-
-    private static int ParseInt(string? value, int fallback)
-        => int.TryParse(value, out var parsed) ? parsed : fallback;
 }

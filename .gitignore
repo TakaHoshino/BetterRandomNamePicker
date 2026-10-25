@@ -21,6 +21,10 @@ plugins/
 # Generated smoke-test output
 ui-smoke*.png
 tray-*.png
+settings-*-preview*.png
+about-*-preview*.png
+language-*-preview*.png
+language-*-fresh*.png
 
 # OS/editor files
 .DS_Store

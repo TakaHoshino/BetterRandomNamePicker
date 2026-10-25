@@ -30,7 +30,10 @@ public partial class UpdateWindow : Window
         {
             var settings = _services.UpdateSettings.Load();
             var uri = _services.Update.ResolveDownloadUri(_asset, settings.Source);
-            StatusText.Text = $"正在下载 {_result.LatestTag}（{_asset.Name}）…";
+            StatusText.Text = LocalizationService.Format(
+                UiText.DownloadingFormat,
+                _result.LatestTag,
+                _asset.Name);
             _services.Log.Write(uri.AbsoluteUri, "UPDATE_DOWNLOAD");
 
             var progress = new Progress<(long Bytes, long Total)>(value =>
@@ -55,13 +58,13 @@ public partial class UpdateWindow : Window
                 "UPDATE_DOWNLOADED");
             _applying = true;
             CancelButton.IsEnabled = false;
-            StatusText.Text = "下载完成，正在应用更新…";
+            StatusText.Text = LocalizationService.Get(UiText.DownloadCompleteApplying);
             DownloadBar.IsIndeterminate = true;
             ProgressText.Text = string.Empty;
 
             _services.Update.Apply(zipPath);
             _services.Log.Write($"版本={_result.LatestTag}", "UPDATE_APPLIED");
-            StatusText.Text = "更新已准备完成，程序将自动重启…";
+            StatusText.Text = LocalizationService.Get(UiText.UpdatePreparedRestart);
             await Task.Delay(1000);
             _done = true;
             if (Application.Current is App app)
@@ -84,16 +87,22 @@ public partial class UpdateWindow : Window
             }
             _services.Log.Write(LogLevel.Warn, "更新下载超时", "UPDATE_TIMEOUT");
             _done = true;
-            MessageBox.Show(this,
-                "下载超时。可在设置中切换为 gh-proxy 代理源后重试。",
-                "检查更新", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                this,
+                UiText.UpdateTimeout,
+                UiText.CheckForUpdates,
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             Close();
         }
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"更新失败: {ex}", "UPDATE_ERROR");
             _done = true;
-            MessageBox.Show(this, $"更新失败：{ex.Message}", "检查更新",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.UpdateFailureFormat, ex.Message),
+                UiText.CheckForUpdates,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             Close();
         }

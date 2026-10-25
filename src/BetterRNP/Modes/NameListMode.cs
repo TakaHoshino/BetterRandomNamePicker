@@ -18,16 +18,16 @@ public sealed class NameListMode : IPickMode
     }
 
     public string Id => "name_list";
-    public string DisplayName => "名字列表模式";
-    public string Button1Text => "导入名单";
-    public string Button2Text => "导出名单";
+    public string DisplayName => LocalizationService.Get(UiText.NameList);
+    public string Button1Text => LocalizationService.Get(UiText.ImportNames);
+    public string Button2Text => LocalizationService.Get(UiText.ExportNames);
 
     public string? CanPick()
     {
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            return "名单已损坏，请重新导入";
+        return LocalizationService.Get(UiText.NamesDamagedReimport);
         }
 
         try
@@ -36,7 +36,7 @@ public sealed class NameListMode : IPickMode
             if (names.Count == 0)
             {
                 _snapshot = Array.Empty<string>();
-                return "名单已损坏，请重新导入";
+        return LocalizationService.Get(UiText.NamesDamagedReimport);
             }
             _snapshot = names;
             return null;
@@ -44,7 +44,7 @@ public sealed class NameListMode : IPickMode
         catch (DataCorruptedException)
         {
             _snapshot = Array.Empty<string>();
-            return "名单已损坏，请重新导入";
+        return LocalizationService.Get(UiText.NamesDamagedReimport);
         }
     }
 
@@ -76,7 +76,7 @@ public sealed class NameListMode : IPickMode
         {
             return true;
         }
-        MessageBox.Show(owner, "当前为锁定模式，请先解锁", "提示",
+        MessageBox.Show(owner, UiText.ConfigurationIsLockedUnlockItFirst, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
     }
@@ -86,15 +86,15 @@ public sealed class NameListMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+        MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var dialog = new OpenFileDialog
         {
-            Title = "导入名单",
-            Filter = "文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*"
+            Title = LocalizationService.Get(UiText.ImportNames),
+            Filter = LocalizationService.Get(UiText.TextOrAllFilesFilter)
         };
         if (dialog.ShowDialog(owner) != true)
         {
@@ -103,13 +103,16 @@ public sealed class NameListMode : IPickMode
         try
         {
             _services.Names.ImportNames(scheme.Name, dialog.FileName);
-            MessageBox.Show(owner, "名单导入成功！", "提示",
+        MessageBox.Show(owner, UiText.NamesImportedSuccessfully, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"导入失败: {ex.Message}", "IMPORT_ERROR");
-            MessageBox.Show(owner, $"导入失败：{ex.Message}", "错误",
+        MessageBox.Show(
+            owner,
+            LocalizationService.Format(UiText.ImportFailureFormat, ex.Message),
+            UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -119,16 +122,16 @@ public sealed class NameListMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+        MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var dialog = new SaveFileDialog
         {
-            Title = "导出名单",
-            Filter = "文本文件 (*.txt)|*.txt",
-            FileName = $"{scheme.Name}_名单.txt"
+            Title = LocalizationService.Get(UiText.ExportNames),
+            Filter = LocalizationService.Get(UiText.TextFileFilter),
+            FileName = scheme.Name + LocalizationService.Get(UiText.NameListFileSuffix)
         };
         if (dialog.ShowDialog(owner) != true)
         {
@@ -137,13 +140,16 @@ public sealed class NameListMode : IPickMode
         try
         {
             _services.Names.ExportNames(scheme.Name, dialog.FileName);
-            MessageBox.Show(owner, "名单导出成功！", "提示",
+        MessageBox.Show(owner, UiText.NamesExportedSuccessfully, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"导出失败: {ex.Message}", "EXPORT_ERROR");
-            MessageBox.Show(owner, $"导出失败：{ex.Message}", "错误",
+        MessageBox.Show(
+            owner,
+            LocalizationService.Format(UiText.ExportFailureFormat, ex.Message),
+            UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

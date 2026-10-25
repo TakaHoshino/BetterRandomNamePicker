@@ -28,6 +28,20 @@ public partial class NameConfigWindow : Window
             }
             NameInput.Focus();
         };
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) => LocalizationService.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        var selectedName = (SchemeCombo.SelectedItem as Scheme)?.Name;
+        SchemeCombo.ItemsSource = null;
+        SchemeCombo.ItemsSource = BuildSchemeList();
+        SchemeCombo.SelectedItem = SchemeCombo.Items
+            .OfType<Scheme>()
+            .FirstOrDefault(scheme => scheme.Name == selectedName)
+            ?? SchemeCombo.Items.OfType<Scheme>().FirstOrDefault();
+        CountText.Text = LocalizationService.Format(UiText.CountFormat, _names.Count);
     }
 
     private List<Scheme> BuildSchemeList()
@@ -64,15 +78,15 @@ public partial class NameConfigWindow : Window
             {
                 _names.Add(name);
             }
-            CountText.Text = $"共 {_names.Count} 条";
+            CountText.Text = LocalizationService.Format(UiText.CountFormat, _names.Count);
         }
         catch (DataCorruptedException)
         {
             _services.Names.DeleteCorruptedCopies(scheme.Name);
             _names.Clear();
-            CountText.Text = "共 0 条";
+            CountText.Text = LocalizationService.Get(UiText.Text0Items);
             _services.Log.Write(LogLevel.Warn, $"方案={scheme.Name}", "名单损坏");
-            MessageBox.Show(this, "名单已损坏，请重新导入", "数据损坏警告",
+            MessageBox.Show(this, UiText.NamesDamagedReimport, UiText.DataCorruptionWarning,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -84,7 +98,7 @@ public partial class NameConfigWindow : Window
             return true;
         }
         _services.Log.Write(LogLevel.Warn, "名单配置窗口处于锁定状态", "操作被拒绝");
-        MessageBox.Show(this, "当前为锁定模式，请先解锁", "提示",
+        MessageBox.Show(this, UiText.ConfigurationIsLockedUnlockItFirst, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
     }
@@ -105,7 +119,7 @@ public partial class NameConfigWindow : Window
         _names.Add(name);
         NameInput.Clear();
         NameInput.Focus();
-        CountText.Text = $"共 {_names.Count} 条";
+        CountText.Text = LocalizationService.Format(UiText.CountFormat, _names.Count);
         _services.Log.Write(
             $"方案={CurrentSchemeName()}｜姓名={name}｜共{_names.Count}条", "添加姓名");
     }
@@ -128,7 +142,7 @@ public partial class NameConfigWindow : Window
         var selected = NameList.SelectedItems.Cast<string>().ToList();
         if (selected.Count == 0)
         {
-            MessageBox.Show(this, "请选择要删除的姓名", "提示",
+            MessageBox.Show(this, UiText.SelectNameToDelete, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -136,7 +150,7 @@ public partial class NameConfigWindow : Window
         {
             _names.Remove(name);
         }
-        CountText.Text = $"共 {_names.Count} 条";
+        CountText.Text = LocalizationService.Format(UiText.CountFormat, _names.Count);
         _services.Log.Write(
             $"方案={CurrentSchemeName()}｜姓名={string.Join("、", selected)}｜剩余{_names.Count}条", "删除姓名");
     }
@@ -149,8 +163,8 @@ public partial class NameConfigWindow : Window
         }
         var dialog = new OpenFileDialog
         {
-            Filter = "文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*",
-            Title = "导入名单"
+            Filter = LocalizationService.Get(UiText.TextOrAllFilesFilter),
+            Title = LocalizationService.Get(UiText.ImportNames)
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -161,12 +175,15 @@ public partial class NameConfigWindow : Window
         {
             _services.Names.ImportNames(scheme.Name, dialog.FileName);
             LoadNames();
-            MessageBox.Show(this, "导入成功！", "提示",
+            MessageBox.Show(this, UiText.ImportedSuccessfully, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"导入失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ImportFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -179,9 +196,9 @@ public partial class NameConfigWindow : Window
         }
         var dialog = new SaveFileDialog
         {
-            Filter = "文本文件 (*.txt)|*.txt",
-            FileName = $"{scheme.Name}_名单.txt",
-            Title = "导出名单"
+            Filter = LocalizationService.Get(UiText.TextFileFilter),
+            FileName = scheme.Name + LocalizationService.Get(UiText.NameListFileSuffix),
+            Title = LocalizationService.Get(UiText.ExportNames)
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -191,12 +208,15 @@ public partial class NameConfigWindow : Window
         try
         {
             _services.Names.ExportNames(scheme.Name, dialog.FileName);
-            MessageBox.Show(this, "导出成功！", "提示",
+            MessageBox.Show(this, UiText.ExportedSuccessfully, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"导出失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ExportFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -213,12 +233,15 @@ public partial class NameConfigWindow : Window
         try
         {
             _services.Names.SaveNames(scheme.Name, _names);
-            MessageBox.Show(this, "保存成功！", "提示",
+            MessageBox.Show(this, UiText.SavedSuccessfully, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"保存失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.SaveFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

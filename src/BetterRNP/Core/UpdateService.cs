@@ -38,6 +38,8 @@ public sealed class UpdateService
 {
     public const string RepoOwner = "TakaHoshino";
     public const string RepoName = "BetterRandomNamePicker";
+    public const string RepositoryUrl =
+        "https://github.com/" + RepoOwner + "/" + RepoName;
     public const string GhProxyPrefix = "https://gh-proxy.com/";
 
     private readonly LogService _log;

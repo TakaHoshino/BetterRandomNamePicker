@@ -54,14 +54,14 @@ public partial class NumberSettingsWindow : Window
         }
 
         _isPicking = true;
-        PickButton.Content = "停止";
+        LocalizationService.SetContent(PickButton, UiText.Stop);
         _lastResult = null;
         _picker = new RollingPicker(
             () => Random.Shared.NextInt64(min, (long)max + 1).ToString(),
             value =>
             {
                 _lastResult = value;
-                ResultText.Text = $"抽取结果: {value}";
+                ResultText.Text = LocalizationService.Format(UiText.ResultFormat, value);
             });
         _picker.Start();
         _services.Log.Write(
@@ -71,7 +71,7 @@ public partial class NumberSettingsWindow : Window
     private void StopPicking()
     {
         _isPicking = false;
-        PickButton.Content = "开始抽取";
+        LocalizationService.SetContent(PickButton, UiText.Start);
         _picker?.Stop();
         _picker = null;
         if (_lastResult is not null)
@@ -90,14 +90,14 @@ public partial class NumberSettingsWindow : Window
         {
             _services.Log.Write(
                 LogLevel.Warn, $"最小值={MinInput.Text}｜最大值={MaxInput.Text}", "数字范围无效");
-            MessageBox.Show(this, "请输入有效的数字！", "错误",
+            MessageBox.Show(this, UiText.InvalidNumber, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         if (min > max)
         {
             _services.Log.Write(LogLevel.Warn, $"最小值={min}｜最大值={max}", "数字范围无效");
-            MessageBox.Show(this, "最小值不能大于最大值！", "错误",
+            MessageBox.Show(this, UiText.MinimumCannotBeGreaterThanMaximum, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
@@ -105,7 +105,10 @@ public partial class NumberSettingsWindow : Window
         if (span > int.MaxValue)
         {
             _services.Log.Write(LogLevel.Warn, $"最小值={min}｜最大值={max}｜跨度={span}", "数字范围过大");
-            MessageBox.Show(this, $"范围过大：取值跨度需 ≤ {int.MaxValue - 1L}（当前 {span}）", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.RangeTooLargeFormat, int.MaxValue - 1L, span),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
@@ -125,7 +128,7 @@ public partial class NumberSettingsWindow : Window
         _committedMax = MaxInput.Text.Trim();
         if (notify)
         {
-            MessageBox.Show(this, "设置已保存！", "提示",
+            MessageBox.Show(this, UiText.SaveSucceeded, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         return true;
@@ -138,7 +141,10 @@ public partial class NumberSettingsWindow : Window
             return;
         }
         _services.Log.Write($"方案={_schemeName}", "应用数字范围到方案");
-        MessageBox.Show(this, $"设置已应用到方案：{_schemeName}（已保存）", "提示",
+        MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.ApplyToSchemeFormat, _schemeName),
+            UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -153,7 +159,7 @@ public partial class NumberSettingsWindow : Window
             return;
         }
         var result = MessageBox.Show(this,
-            "当前数字范围修改尚未保存，确定放弃并关闭？", "提示",
+            UiText.DiscardNumberChangesConfirmation, UiText.Notice,
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result == MessageBoxResult.Yes)
         {

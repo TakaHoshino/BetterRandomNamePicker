@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using BetterRNP.Core;
 using BetterRNP.Plugins;
 using BetterRNP.PluginSdk.Packaging;
 using Microsoft.Win32;
@@ -14,8 +15,22 @@ public partial class PluginManagerWindow : Window
     {
         _plugins = plugins;
         InitializeComponent();
-        PluginDirLabel.Text = $"插件目录：{_plugins.PluginDirectory}";
+        UpdateDirectoryLabel();
         RefreshList();
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) => LocalizationService.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        UpdateDirectoryLabel();
+        RefreshList();
+    }
+
+    private void UpdateDirectoryLabel()
+    {
+        PluginDirLabel.Text =
+            $"{LocalizationService.Get(UiText.PluginFolder)}{_plugins.PluginDirectory}";
     }
 
     private void RefreshList()
@@ -28,8 +43,8 @@ public partial class PluginManagerWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "选择插件包",
-            Filter = $"BetterRNP 插件 (*{RnpPackager.Extension})|*{RnpPackager.Extension}"
+            Title = LocalizationService.Get(UiText.SelectPluginPackage),
+            Filter = $"BetterRNP {LocalizationService.Get(UiText.Plugins)} (*{RnpPackager.Extension})|*{RnpPackager.Extension}"
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -39,13 +54,19 @@ public partial class PluginManagerWindow : Window
         var result = _plugins.LoadFromPackage(dialog.FileName, copyIntoPluginDirectory: true);
         if (!result.Success)
         {
-            MessageBox.Show(this, $"插件加载失败：\n{result.Error}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Get(UiText.PluginLoadFailed) + "\n" + result.Error,
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
         RefreshList();
-        MessageBox.Show(this, $"插件已加载：{result.Info!.DisplayName}", "插件管理",
+        MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.PluginLoadedFormat, result.Info!.DisplayName),
+            UiText.PluginManager,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -57,14 +78,17 @@ public partial class PluginManagerWindow : Window
         }
         if (info.BuiltIn)
         {
-            MessageBox.Show(this, "内置插件不可移除。", "提示",
+            MessageBox.Show(this, UiText.BuiltInPluginCannotBeRemoved, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var confirm = MessageBox.Show(this,
-            $"确定移除插件「{info.DisplayName}」吗？\n（将同时删除其 .rnpp 文件）",
-            "确认移除", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var confirm = MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.RemovePluginConfirmationFormat, info.DisplayName),
+            UiText.ConfirmRemoval,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes)
         {
             return;

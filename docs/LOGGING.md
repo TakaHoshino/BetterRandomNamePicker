@@ -17,7 +17,7 @@ BetterRNP 会记录启动、抽取、数据修改、设置、主题、更新、�
 示例：
 
 ```text
-[2026-10-24 22:00:00.000] [INFO ] 【APP_START】v2.2.0｜Microsoft Windows NT 10.0.26200.0｜64 位｜数据目录 D:\BetterRNP
+[2026-10-25 10:00:00.000] [INFO ] 【APP_START】v2.3.0｜Microsoft Windows NT 10.0.26200.0｜64 位｜数据目录 D:\BetterRNP｜设置 HKEY_CURRENT_USER\Software\BetterRNP\Settings
 [2026-10-18 15:30:20.118] [INFO ] 【切换方案】方案=初三1班｜类型=name_list｜默认模式=名字列表模式
 [2026-10-18 15:30:24.902] [INFO ] 【开始抽取】方案=初三1班｜模式=名字列表模式
 [2026-10-18 15:30:26.377] [INFO ] 【抽取结果】方案=初三1班｜模式=名字列表模式｜结果=张三
@@ -105,8 +105,10 @@ BetterRNP 会记录启动、抽取、数据修改、设置、主题、更新、�
 | `SAVE_WITH_ENCRYPTION` | 信息 | 方案、数据类型 |
 | `DATA_RECOVERED_AND_SYNCED` / `RECOVERY_FAILED` | 信息 / 警告 | 数据恢复来源或失败原因 |
 | `FILE_DELETED` / `FILE_DELETE_FAILED` | 信息 / 错误 | 文件路径与错误 |
-| `CONFIG_CREATE` / `CONFIG_RESTORE` | 信息 | 配置文件创建或从备份恢复 |
-| `CONFIG_SAVE_ERROR` / `CONFIG_LOAD_ERROR` | 错误 | 异常消息 |
+| `SETTINGS_MIGRATED_TO_REGISTRY` | 信息 | 注册表路径和迁移来源数量 |
+| `SETTINGS_MIGRATION_FAILED` | 错误 | 旧设置迁移失败，旧文件会保留 |
+| `SETTINGS_LEGACY_FILE_DELETE_FAILED` | 警告 | 迁移成功但旧设置文件删除失败 |
+| `CONFIG_SAVE_ERROR` | 错误 | 保存注册表设置失败 |
 
 ### 3.5 设置与安全
 

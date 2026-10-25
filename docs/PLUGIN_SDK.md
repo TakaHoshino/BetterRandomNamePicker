@@ -4,8 +4,8 @@
 
 当前版本约定：
 
-- 主程序版本：BetterRNP 2.2.0
-- 插件 SDK 版本：`BetterRNP.PluginSdk 1.1.0`
+- 主程序版本：BetterRNP 2.3.0
+- 插件 SDK 版本：`BetterRNP.PluginSdk 1.4.0`
 - 插件 API 版本：`1.0`
 - 插件包扩展名：`.rnpp`
 - SDK 目标框架：`.NET 8`
@@ -60,7 +60,7 @@ BetterRNP 插件在宿主进程内运行，可以：
 SDK 作为 Release 附件发布：
 
 ```text
-BetterRNP.PluginSdk.1.1.0.nupkg
+BetterRNP.PluginSdk.1.4.0.nupkg
 ```
 
 下载后放入一个本地目录，例如：
@@ -431,6 +431,152 @@ if (context is ICurrentPickerPluginContext currentPicker)
 
 该接口可以覆盖插件自定义模式。`ISchemeCommandPluginContext`、`IPluginContext`
 等现有接口均保持不变。
+
+### 8.5 插件设置项（可选扩展）
+
+插件可以检测 `IPluginSettingsContext` 并注册一个嵌入主程序设置窗口的设置页面：
+
+```csharp
+void RegisterSettingsItem(
+    string id,
+    string title,
+    Func<object> viewFactory);
+```
+
+示例：
+
+```csharp
+if (context is IPluginSettingsContext settings)
+{
+    settings.RegisterSettingsItem(
+        "my-settings",
+        "我的插件设置",
+        () => new MyPluginSettingsView());
+}
+```
+
+规则：
+
+- `id` 在同一插件内必须唯一。
+- `viewFactory` 在 UI 线程调用，BetterRNP 宿主会接收其返回的 WPF `FrameworkElement` 并嵌入右侧设置区。
+- 视图会在左侧“插件”分类下显示，标题为 `title`；鼠标悬停可查看所属插件名称。
+- 插件禁用或移除时，对应设置项立即隐藏；已创建的视图会被移出缓存，若实现 `IDisposable` 则同时释放。
+- 设置视图的保存策略由插件自行管理。主程序设置页目前采用即时保存模式。
+
+完整示例见 `examples/BetterRNP.DemoPlugin`。
+
+### 8.6 悬浮球实时状态（可选扩展）
+
+宿主可以实现 `IFloatingBallStateContext`，向插件提供悬浮球的实时几何和颜色信息：
+
+```csharp
+FloatingBallState? CurrentFloatingBallState { get; }
+
+event EventHandler<FloatingBallStateChangedEventArgs>?
+    FloatingBallStateChanged;
+```
+
+`FloatingBallState` 字段：
+
+| 字段 | 含义 |
+|---|---|
+| `X`, `Y` | 悬浮球左上角的屏幕物理像素坐标 |
+| `Width`, `Height` | 窗口物理像素尺寸 |
+| `ColorHex` | 当前背景颜色的 `#RRGGBB` 值 |
+| `IsVisible` | 当前是否可见 |
+
+使用示例：
+
+```csharp
+if (context is IFloatingBallStateContext ballState)
+{
+    var current = ballState.CurrentFloatingBallState;
+    context.Log($"悬浮球：{current?.X}, {current?.Y} {current?.ColorHex}");
+
+    ballState.FloatingBallStateChanged += (_, args) =>
+    {
+        var state = args.State;
+        context.Log(
+            $"移动/缩放：{state.X}, {state.Y} " +
+            $"{state.Width}x{state.Height} {state.ColorHex}");
+    };
+}
+```
+
+位置和尺寸使用屏幕物理像素，适合与 Win32、截图和覆盖窗口配合。颜色只包含 RGB；
+透明度由窗口背景的 Alpha 通道单独控制。事件在 UI 线程触发。插件卸载时宿主会自动
+移除仍未解除的订阅。
+
+### 8.7 插件多语言（可选扩展）
+
+插件可以检测 `IPluginLocalizationContext`，注册自己的翻译表并跟随宿主语言切换：
+
+```csharp
+if (context is IPluginLocalizationContext localization)
+{
+    localization.RegisterTranslations("en-US", new Dictionary<string, string>
+    {
+        ["打开计时器"] = "Open timer"
+    });
+
+    localization.RegisterLocalizedCommand(
+        "open-timer",
+        () => localization.Translate("打开计时器"),
+        OpenTimer);
+
+    localization.LanguageChanged += (_, args) =>
+    {
+        // 更新自定义窗口中的文本。
+        UpdateLanguage(args.LanguageCode);
+    };
+}
+```
+
+支持的宿主语言代码：
+
+| 语言 | 代码 |
+|---|---|
+| 简体中文 | `zh-Hans` |
+| 繁體中文 | `zh-Hant` |
+| 繁體中文（粵語） | `zh-HK` |
+| English | `en-US` |
+| Русский | `ru-RU` |
+| 日本語 | `ja-JP` |
+
+`Translate()` 优先使用该插件注册的当前语言翻译，找不到时回退到宿主翻译，再回退到原文。
+
+动态标题接口：
+
+```csharp
+void RegisterLocalizedCommand(
+    string id,
+    Func<string> titleProvider,
+    Action action);
+
+void RegisterLocalizedFloatingBallCommand(
+    string id,
+    Func<string> titleProvider,
+    Action action);
+
+void RegisterLocalizedSettingsItem(
+    string id,
+    Func<string> titleProvider,
+    Func<object> viewFactory);
+
+void RegisterLocalizedSchemeCommand(
+    string id,
+    Func<string> titleProvider,
+    Action<IPluginModeContext> action);
+
+void RegisterLocalizedCurrentPickerCommand(
+    string id,
+    Func<string> titleProvider,
+    Action<IPluginPickerSnapshot> action);
+```
+
+语言切换后，宿主会重新获取菜单和设置项标题，无需重启。插件设置视图应在
+`LanguageChanged` 中更新自身文本，并在视图实现 `IDisposable` 时解除事件订阅。
+示例可参考 `examples/BetterRNP.DemoPlugin`。
 
 ## 9. 注册自定义抽取模式
 

@@ -1,7 +1,7 @@
 <Window x:Class="BetterRNP.Views.NameConfigWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="BetterRNP - 名单配置"
+        Title="{DynamicResource Ui.BetterrnpNameConfiguration}"
         Width="820"
         Height="600"
         MinWidth="640"
@@ -16,7 +16,7 @@
 
         <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="14">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="选择方案"
+                <TextBlock Text="{DynamicResource Ui.SelectScheme}"
                            VerticalAlignment="Center"
                            Margin="0,0,10,0"
                            Foreground="{StaticResource MutedBrush}" />
@@ -58,10 +58,10 @@
                 <StackPanel Grid.Row="0"
                             Grid.Column="1"
                             Orientation="Horizontal">
-                    <Button Content="添加"
+                    <Button Content="{DynamicResource Ui.Add}"
                             Style="{StaticResource SecondaryButton}"
                             Click="Add_Click" />
-                    <Button Content="删除选中"
+                    <Button Content="{DynamicResource Ui.DeleteSelected}"
                             Style="{StaticResource SecondaryButton}"
                             Click="Delete_Click" />
                 </StackPanel>
@@ -70,13 +70,13 @@
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Margin="0,8,0,0">
-                    <Button Content="导入 TXT"
+                    <Button Content="{DynamicResource Ui.ImportTxt}"
                             Style="{StaticResource SecondaryButton}"
                             Click="Import_Click" />
-                    <Button Content="导出 TXT"
+                    <Button Content="{DynamicResource Ui.ExportTxt}"
                             Style="{StaticResource SecondaryButton}"
                             Click="Export_Click" />
-                    <Button Content="保存"
+                    <Button Content="{DynamicResource Ui.Save}"
                             Style="{StaticResource PrimaryButton}"
                             MinWidth="110"
                             Click="Save_Click" />

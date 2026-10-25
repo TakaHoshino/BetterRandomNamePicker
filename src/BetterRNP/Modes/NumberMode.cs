@@ -18,16 +18,16 @@ public sealed class NumberMode : IPickMode
     }
 
     public string Id => "number";
-    public string DisplayName => "数字模式";
-    public string Button1Text => "设置数字范围";
-    public string Button2Text => "查看当前设置";
+    public string DisplayName => LocalizationService.Get(UiText.Numbers);
+    public string Button1Text => LocalizationService.Get(UiText.SetNumberRange);
+    public string Button2Text => LocalizationService.Get(UiText.ViewCurrentSettings);
 
     public string? CanPick()
     {
         var scheme = _currentScheme();
         var range = scheme is null ? null : _services.Schemes.GetNumberRange(scheme.Name);
         _snapshot = range;
-        return range is null ? "请先设置数字范围！" : null;
+        return range is null ? LocalizationService.Get(UiText.NumberRangeRequired) : null;
     }
 
     public Func<string> CreateCandidateSupplier()
@@ -48,7 +48,7 @@ public sealed class NumberMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+            MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -60,7 +60,7 @@ public sealed class NumberMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+            MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -68,13 +68,19 @@ public sealed class NumberMode : IPickMode
         var range = _services.Schemes.GetNumberRange(scheme.Name);
         if (range is null)
         {
-            MessageBox.Show(owner, "当前方案尚未设置数字范围！", "提示",
+            MessageBox.Show(
+                owner,
+                UiText.NoNumberRangeIsConfiguredForThisScheme,
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         _services.Log.Write($"方案={scheme.Name}｜范围=[{range.Min},{range.Max}]", "查看数字范围");
-        MessageBox.Show(owner,
-            $"当前数字范围：[{range.Min}, {range.Max}]\n（修改请在“设置数字范围”中保存）",
-            "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(
+            owner,
+            LocalizationService.Format(UiText.CurrentNumberRangeFormat, range.Min, range.Max),
+            UiText.Notice,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 }

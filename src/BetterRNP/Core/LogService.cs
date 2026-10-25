@@ -21,9 +21,9 @@ public sealed record LogEntry(DateTime Timestamp, LogLevel Level, string Operati
 
     public string LevelText => Level switch
     {
-        LogLevel.Warn => "警告",
-        LogLevel.Error => "错误",
-        _ => "信息"
+        LogLevel.Warn => LocalizationService.Get(UiText.WarningLevel),
+        LogLevel.Error => LocalizationService.Get(UiText.ErrorLevel),
+        _ => LocalizationService.Get(UiText.InformationLevel)
     };
 }
 
@@ -163,11 +163,11 @@ public sealed class LogService
         {
             return File.Exists(_logFile)
                 ? File.ReadAllText(_logFile, Encoding.UTF8)
-                : "暂无日志记录";
+                : LocalizationService.Get(UiText.NoLogEntries);
         }
         catch (Exception ex)
         {
-            return $"读取日志失败：{ex.Message}";
+            return LocalizationService.Format(UiText.ReadLogFailureFormat, ex.Message);
         }
     }
 

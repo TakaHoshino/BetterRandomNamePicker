@@ -1,6 +1,8 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using BetterRNP.Core;
+using BetterRNP.Plugins;
 using Microsoft.Win32;
 
 namespace BetterRNP.Views;
@@ -8,27 +10,286 @@ namespace BetterRNP.Views;
 public partial class SettingsWindow : Window
 {
     private readonly AppServices _services;
+    private readonly PluginManager? _plugins;
+    private readonly Dictionary<PluginSettingsItem, object> _pluginViews = new();
     private readonly DispatcherTimer _radiusLogTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private readonly DispatcherTimer _opacityLogTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private bool _loading;
     private bool _checkingUpdate;
+    private int _previewRadius;
+    private int _previewOpacity;
+    private bool _radiusDirty;
+    private bool _opacityDirty;
 
-    public SettingsWindow(AppServices services)
+    public SettingsWindow(AppServices services, PluginManager? plugins = null)
     {
         _services = services;
+        _plugins = plugins;
         InitializeComponent();
         _radiusLogTimer.Tick += (_, _) =>
         {
             _radiusLogTimer.Stop();
-            _services.Log.Write($"悬浮球半径={_services.Config.FloatingBallRadius}", "调整悬浮球外观");
+            if (_radiusDirty)
+            {
+                _services.Config.SetFloatingBallRadius(_previewRadius);
+                _radiusDirty = false;
+                _services.Log.Write($"悬浮球半径={_previewRadius}", "调整悬浮球外观");
+            }
         };
         _opacityLogTimer.Tick += (_, _) =>
         {
             _opacityLogTimer.Stop();
-            _services.Log.Write($"悬浮球透明度={_services.Config.FloatingBallOpacity}", "调整悬浮球外观");
+            if (_opacityDirty)
+            {
+                _services.Config.SetFloatingBallOpacity(_previewOpacity);
+                _opacityDirty = false;
+                _services.Log.Write($"悬浮球透明度={_previewOpacity}", "调整悬浮球外观");
+            }
         };
         _services.Theme.Attach(this, ThemeService.CategorySettings);
         LoadSettings();
+        BuildPluginNavigation();
+        GeneralNavigation.IsSelected = true;
+        if (_plugins is not null)
+        {
+            _plugins.PluginsChanged += OnPluginsChanged;
+        }
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += OnClosed;
+    }
+
+    private void OnPluginsChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(BuildPluginNavigation));
+            return;
+        }
+        BuildPluginNavigation();
+    }
+
+    private void BuildPluginNavigation()
+    {
+        var selected = (SettingsNavigation.SelectedItem as TreeViewItem)?.Tag as PluginSettingsItem;
+        var items = _plugins?.SettingsItems ?? Array.Empty<PluginSettingsItem>();
+        var validItems = new HashSet<PluginSettingsItem>(items);
+        foreach (var removed in _pluginViews.Keys.Where(item => !validItems.Contains(item)).ToList())
+        {
+            DisposePluginView(_pluginViews[removed]);
+            _pluginViews.Remove(removed);
+        }
+
+        PluginsNavigation.Items.Clear();
+        foreach (var item in items)
+        {
+            PluginsNavigation.Items.Add(new TreeViewItem
+            {
+                Header = item.DisplayTitle,
+                Tag = item,
+                ToolTip = item.PluginTitle
+            });
+        }
+        PluginsNavigation.IsExpanded = items.Count > 0;
+
+        var pluginCount = items.Select(item => item.PluginId).Distinct(StringComparer.Ordinal).Count();
+        PluginSummaryText.Text = items.Count == 0
+            ? LocalizationService.Get(UiText.NoPluginSettings)
+            : LocalizationService.Format(
+                UiText.PluginSettingsSummaryFormat,
+                pluginCount,
+                items.Count);
+
+        if (selected is not null)
+        {
+            var replacement = PluginsNavigation.Items
+                .OfType<TreeViewItem>()
+                .FirstOrDefault(item => item.Tag is PluginSettingsItem candidate
+                    && candidate.PluginId == selected.PluginId
+                    && candidate.Id == selected.Id);
+            if (replacement is not null)
+            {
+                replacement.IsSelected = true;
+                return;
+            }
+            PluginsNavigation.IsSelected = true;
+        }
+    }
+
+    private void SettingsNavigation_SelectedItemChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (e.NewValue is not TreeViewItem item)
+        {
+            return;
+        }
+        if (item.Tag is PluginSettingsItem pluginSettings)
+        {
+            ShowPluginSettings(pluginSettings);
+            return;
+        }
+        if (item.Tag is string page)
+        {
+            ShowCorePage(page);
+        }
+    }
+
+    private void ShowCorePage(string page)
+    {
+        GeneralPage.Visibility = page == "general" ? Visibility.Visible : Visibility.Collapsed;
+        LanguagePage.Visibility = page == "language" ? Visibility.Visible : Visibility.Collapsed;
+        InterfacePage.Visibility = page == "interface" ? Visibility.Visible : Visibility.Collapsed;
+        UpdatePage.Visibility = page == "update" ? Visibility.Visible : Visibility.Collapsed;
+        SecurityPage.Visibility = page == "security" ? Visibility.Visible : Visibility.Collapsed;
+        LogPage.Visibility = page == "logs" ? Visibility.Visible : Visibility.Collapsed;
+        PluginsOverviewPage.Visibility = page == "plugins" ? Visibility.Visible : Visibility.Collapsed;
+        PluginSettingsHost.Visibility = Visibility.Collapsed;
+        PluginSettingsHost.Content = null;
+        var title = page switch
+        {
+            "interface" => UiText.Interface,
+            "language" => UiText.Language,
+            "update" => UiText.Updates,
+            "security" => UiText.Security,
+            "logs" => UiText.Logs,
+            "plugins" => UiText.Plugins,
+            _ => UiText.General
+        };
+        LocalizationService.SetText(SettingsPageTitle, title);
+    }
+
+    private void ShowPluginSettings(PluginSettingsItem item)
+    {
+        GeneralPage.Visibility = Visibility.Collapsed;
+        LanguagePage.Visibility = Visibility.Collapsed;
+        InterfacePage.Visibility = Visibility.Collapsed;
+        UpdatePage.Visibility = Visibility.Collapsed;
+        SecurityPage.Visibility = Visibility.Collapsed;
+        LogPage.Visibility = Visibility.Collapsed;
+        PluginsOverviewPage.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            if (!_pluginViews.TryGetValue(item, out var view))
+            {
+                view = item.ViewFactory();
+                if (view is not FrameworkElement)
+                {
+                    throw new InvalidOperationException(
+                        LocalizationService.Get(UiText.PluginSettingsViewError));
+                }
+                _pluginViews[item] = view;
+            }
+            PluginSettingsHost.Content = view;
+            PluginSettingsHost.Visibility = Visibility.Visible;
+            SettingsPageTitle.Text = LocalizationService.Format(
+                UiText.PluginSettingsTitleFormat,
+                item.PluginTitle,
+                item.DisplayTitle);
+        }
+        catch (Exception ex)
+        {
+            _services.Log.WriteException("PLUGIN_SETTINGS_VIEW_ERROR", ex);
+            PluginSettingsHost.Content = new TextBlock
+            {
+                Text = LocalizationService.Format(
+                    UiText.PluginSettingsLoadFailureFormat,
+                    ex.Message),
+                Foreground = System.Windows.Media.Brushes.DarkRed,
+                TextWrapping = TextWrapping.Wrap
+            };
+            PluginSettingsHost.Visibility = Visibility.Visible;
+            SettingsPageTitle.Text = item.DisplayTitle;
+        }
+    }
+
+    private static void DisposePluginView(object view)
+    {
+        if (view is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        FlushAppearanceSettings();
+        if (_plugins is not null)
+        {
+            _plugins.PluginsChanged -= OnPluginsChanged;
+        }
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
+        foreach (var view in _pluginViews.Values)
+        {
+            DisposePluginView(view);
+        }
+        _pluginViews.Clear();
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(RefreshLanguageDependentContent));
+            return;
+        }
+        RefreshLanguageDependentContent();
+    }
+
+    private void RefreshLanguageDependentContent()
+    {
+        BuildPluginNavigation();
+        RefreshLocalizedValues();
+        if ((SettingsNavigation.SelectedItem as TreeViewItem)?.Tag is PluginSettingsItem item)
+        {
+            ShowPluginSettings(item);
+        }
+        else if ((SettingsNavigation.SelectedItem as TreeViewItem)?.Tag is string page)
+        {
+            ShowCorePage(page);
+        }
+    }
+
+    private void RefreshLocalizedValues()
+    {
+        InstallTypeText.Text = UpdateService.DetectCurrentInstallationKind()
+            == UpdateAssetKind.SelfContained
+                ? LocalizationService.Get(UiText.InstallTypeSelfContainedFormat)
+                : LocalizationService.Get(UiText.InstallTypeFrameworkDependentFormat);
+        RadiusValue.Text = _previewRadius > RadiusSlider.Maximum
+            ? LocalizationService.Format(UiText.PixelValueAboveSliderFormat, _previewRadius)
+            : LocalizationService.Format(UiText.PixelValueFormat, _previewRadius);
+        OpacityValue.Text = OpacityText(_previewOpacity);
+        LogPathText.Text = LocalizationService.Format(
+            UiText.LogFilePathFormat,
+            _services.Log.LogFile);
+        UpdateLockButton();
+    }
+
+    private void FlushAppearanceSettings()
+    {
+        _radiusLogTimer.Stop();
+        _opacityLogTimer.Stop();
+        if (_radiusDirty)
+        {
+            _services.Config.SetFloatingBallRadius(_previewRadius);
+            _radiusDirty = false;
+        }
+        if (_opacityDirty)
+        {
+            _services.Config.SetFloatingBallOpacity(_previewOpacity);
+            _opacityDirty = false;
+        }
+    }
+
+    private void OpenPluginManager_Click(object sender, RoutedEventArgs e)
+    {
+        if (_plugins is null)
+        {
+            return;
+        }
+        new PluginManagerWindow(_plugins) { Owner = this }.ShowDialog();
+        BuildPluginNavigation();
     }
 
     private void LoadSettings()
@@ -37,6 +298,7 @@ public partial class SettingsWindow : Window
         try
         {
             AutoStartCheck.IsChecked = _services.Config.AutoStart;
+            SelectLanguageItem(_services.Config.Language);
             MinimizeToTrayCheck.IsChecked = _services.Config.MinimizeToTray;
             AutoShowBallCheck.IsChecked = _services.Config.AutoShowFloatingBall;
             ThemeEnabledCheck.IsChecked = _services.Theme.IsEnabled;
@@ -46,23 +308,27 @@ public partial class SettingsWindow : Window
             ProxySourceRadio.IsChecked = updateSettings.Source == UpdateSource.GhProxy;
             InstallTypeText.Text = UpdateService.DetectCurrentInstallationKind()
                 == UpdateAssetKind.SelfContained
-                ? "当前安装类型：自包含版"
-                : "当前安装类型：框架依赖版";
+                ? LocalizationService.Get(UiText.InstallTypeSelfContainedFormat)
+                : LocalizationService.Get(UiText.InstallTypeFrameworkDependentFormat);
 
             var radius = _services.Config.FloatingBallRadius;
+            _previewRadius = radius;
             RadiusSlider.Value = Math.Clamp(radius, (int)RadiusSlider.Minimum, (int)RadiusSlider.Maximum);
             RadiusValue.Text = radius > RadiusSlider.Maximum
-                ? $"{radius} 像素（大于滑块上限，仅作显示）"
-                : $"{radius} 像素";
+                ? LocalizationService.Format(UiText.PixelValueAboveSliderFormat, radius)
+                : LocalizationService.Format(UiText.PixelValueFormat, radius);
 
             var opacity = _services.Config.FloatingBallOpacity;
+            _previewOpacity = opacity;
             OpacitySlider.Value = Math.Clamp(opacity, (int)OpacitySlider.Minimum, (int)OpacitySlider.Maximum);
             OpacityValue.Text = OpacityText(opacity);
             UpdateLockButton();
             DefaultPasswordWarning.Visibility = _services.Passwords.IsUsingBuiltInDefaultPassword()
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-            LogPathText.Text = $"日志文件：{_services.Log.LogFile}";
+            LogPathText.Text = LocalizationService.Format(
+                UiText.LogFilePathFormat,
+                _services.Log.LogFile);
         }
         finally
         {
@@ -74,13 +340,39 @@ public partial class SettingsWindow : Window
     {
         if (opacity < 100)
         {
-            return $"{opacity}（高透明）";
+            return LocalizationService.Format(UiText.HighTransparencyFormat, opacity);
         }
         if (opacity < 180)
         {
-            return $"{opacity}（半透明）";
+            return LocalizationService.Format(UiText.MediumTransparencyFormat, opacity);
         }
-        return $"{opacity}（低透明）";
+        return LocalizationService.Format(UiText.LowTransparencyFormat, opacity);
+    }
+
+    private void SelectLanguageItem(string languageCode)
+    {
+        var normalized = LocalizationService.NormalizeLanguage(languageCode);
+        LanguageCombo.SelectedItem = LanguageCombo.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(
+                item.Tag?.ToString(),
+                normalized,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void LanguageCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_loading || LanguageCombo.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+        var languageCode = LocalizationService.NormalizeLanguage(item.Tag?.ToString());
+        _services.Config.SetLanguage(languageCode);
+        LocalizationService.SetLanguage(languageCode);
+        _services.Log.Write(languageCode, "LANGUAGE_CHANGED");
+        LocalizationService.ApplyToApplication();
     }
 
     private void AutoStart_Click(object sender, RoutedEventArgs e)
@@ -93,7 +385,7 @@ public partial class SettingsWindow : Window
         _services.Config.SetAutoStart(enabled);
         if (!StartupRegistration.SetEnabled(enabled))
         {
-            MessageBox.Show(this, "修改开机启动注册表失败，请检查当前用户权限。", "错误",
+            MessageBox.Show(this, UiText.StartupRegistrationFailed, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         _services.Log.Write($"开机自启：{(enabled ? "开启" : "关闭")}", "SETTING_CHANGED");
@@ -130,9 +422,14 @@ public partial class SettingsWindow : Window
         {
             return;
         }
-        var radius = (int)e.NewValue;
-        RadiusValue.Text = $"{radius} 像素";
-        _services.Config.SetFloatingBallRadius(radius);
+        var radius = (int)Math.Round(e.NewValue);
+        _previewRadius = radius;
+        RadiusValue.Text = LocalizationService.Format(UiText.PixelValueFormat, radius);
+        if (Application.Current is App app)
+        {
+            app.UpdateFloatingBallAppearance(_previewRadius, _previewOpacity);
+        }
+        _radiusDirty = true;
         _radiusLogTimer.Stop();
         _radiusLogTimer.Start();
     }
@@ -143,11 +440,49 @@ public partial class SettingsWindow : Window
         {
             return;
         }
-        var opacity = (int)e.NewValue;
+        var opacity = (int)Math.Round(e.NewValue);
+        _previewOpacity = opacity;
         OpacityValue.Text = OpacityText(opacity);
-        _services.Config.SetFloatingBallOpacity(opacity);
+        if (Application.Current is App app)
+        {
+            app.UpdateFloatingBallAppearance(_previewRadius, _previewOpacity);
+        }
+        _opacityDirty = true;
         _opacityLogTimer.Stop();
         _opacityLogTimer.Start();
+    }
+
+    private void ResetFloatingBallDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        _radiusLogTimer.Stop();
+        _opacityLogTimer.Stop();
+        _radiusDirty = false;
+        _opacityDirty = false;
+        _previewRadius = ConfigService.FloatingBallRadiusDefault;
+        _previewOpacity = ConfigService.FloatingBallOpacityDefault;
+
+        _loading = true;
+        try
+        {
+            RadiusSlider.Value = _previewRadius;
+            OpacitySlider.Value = _previewOpacity;
+            RadiusValue.Text = LocalizationService.Format(UiText.PixelValueFormat, _previewRadius);
+            OpacityValue.Text = OpacityText(_previewOpacity);
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        _services.Config.SetFloatingBallRadius(_previewRadius);
+        _services.Config.SetFloatingBallOpacity(_previewOpacity);
+        if (Application.Current is App app)
+        {
+            app.UpdateFloatingBallAppearance(_previewRadius, _previewOpacity);
+        }
+        _services.Log.Write(
+            $"悬浮球半径={_previewRadius}｜透明度={_previewOpacity}",
+            "还原悬浮球默认外观");
     }
 
     private void ThemeEnabled_Click(object sender, RoutedEventArgs e)
@@ -195,7 +530,7 @@ public partial class SettingsWindow : Window
         }
         _checkingUpdate = true;
         CheckNowButton.IsEnabled = false;
-        UpdateStatusText.Text = "检查中…";
+        UpdateStatusText.Text = LocalizationService.Get(UiText.CheckingForUpdates);
         PersistUpdateSettings();
         try
         {
@@ -205,10 +540,12 @@ public partial class SettingsWindow : Window
                 return;
             }
             UpdateStatusText.Text = result is null
-                ? "检查失败"
+                ? LocalizationService.Get(UiText.CheckFailed)
                 : result.UpdateAvailable
-                    ? $"发现新版本 {result.LatestTag}"
-                    : $"已是最新版本（{UpdateService.GetCurrentTag()}）";
+                    ? LocalizationService.Format(UiText.UpdateAvailableFormat, result.LatestTag)
+                    : LocalizationService.Format(
+                        UiText.LatestVersionFormat,
+                        UpdateService.GetCurrentTag());
         }
         finally
         {
@@ -230,8 +567,8 @@ public partial class SettingsWindow : Window
     {
         var dialog = new SaveFileDialog
         {
-            Title = "导出日志",
-            Filter = "文本文件 (*.txt)|*.txt",
+            Title = LocalizationService.Get(UiText.ExportLogsTitle),
+            Filter = LocalizationService.Get(UiText.TextFileFilter),
             FileName = "BetterRNP_Modifylog.txt"
         };
         if (dialog.ShowDialog(this) != true)
@@ -247,15 +584,21 @@ public partial class SettingsWindow : Window
             }
             else
             {
-                File.WriteAllText(dialog.FileName, "暂无日志记录");
+                File.WriteAllText(dialog.FileName, LocalizationService.Get(UiText.NoLogEntries));
             }
             _services.Log.Write(dialog.FileName, "导出日志");
-            MessageBox.Show(this, $"日志已成功导出到：\n{dialog.FileName}", "导出成功",
+            MessageBox.Show(
+                this,
+                LocalizationService.Get(UiText.LogExportedTo) + "\n" + dialog.FileName,
+                UiText.ExportedSuccessfully,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"导出失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ExportFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -265,7 +608,10 @@ public partial class SettingsWindow : Window
         if (_services.Passwords.IsLocked)
         {
             _services.Log.Write("请求解锁配置", "解锁配置");
-            var passwordWindow = new PasswordWindow(_services, "密码验证", "请输入配置解锁密码：")
+            var passwordWindow = new PasswordWindow(
+                _services,
+                UiText.PasswordVerificationTitle,
+                UiText.EnterUnlockPassword)
             {
                 Owner = this
             };
@@ -273,19 +619,22 @@ public partial class SettingsWindow : Window
             if (passwordWindow.Verified)
             {
                 _services.Log.Write("配置已解锁", "LOCK_CHANGED");
-                MessageBox.Show(this, "已解锁！现在可以修改配置了。", "提示",
+                MessageBox.Show(this, UiText.ConfigurationUnlocked, UiText.Notice,
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         else
         {
-            var result = MessageBox.Show(this,
-                "确定要锁定配置吗？\n锁定后需要密码才能修改配置。",
-                "确认锁定", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = MessageBox.Show(
+                this,
+                UiText.ConfirmLockMessage,
+                UiText.ConfirmLockTitle,
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
             if (result == MessageBoxResult.Yes)
             {
                 _services.Passwords.Lock();
-                MessageBox.Show(this, "已锁定！修改配置需要密码验证。", "提示",
+                MessageBox.Show(this, UiText.ConfigurationLocked, UiText.Notice,
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -294,9 +643,11 @@ public partial class SettingsWindow : Window
 
     private void UpdateLockButton()
     {
-        LockButton.Content = _services.Passwords.IsLocked
-            ? "🔒 当前已锁定（点击解锁）"
-            : "🔓 当前已解锁（点击锁定）";
+        LocalizationService.SetContent(
+            LockButton,
+            _services.Passwords.IsLocked
+                ? UiText.ConfigurationLockedButton
+                : UiText.ConfigurationUnlockedButton);
     }
 
     private void ChangePassword_Click(object sender, RoutedEventArgs e)
@@ -304,13 +655,16 @@ public partial class SettingsWindow : Window
         if (_services.Passwords.IsLocked)
         {
             _services.Log.Write(LogLevel.Warn, "锁定状态下尝试修改密码", "操作被拒绝");
-            MessageBox.Show(this, "请先解锁后再修改密码！", "提示",
+            MessageBox.Show(this, UiText.UnlockBeforeChangingPassword, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         _services.Log.Write("窗口=修改密码", "打开窗口");
-        var verify = new PasswordWindow(_services, "验证原密码", "请输入原密码：")
+        var verify = new PasswordWindow(
+            _services,
+            UiText.VerifyOriginalPassword,
+            UiText.EnterOriginalPassword)
         {
             Owner = this
         };

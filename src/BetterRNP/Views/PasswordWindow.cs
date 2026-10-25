@@ -10,22 +10,22 @@ public sealed class PasswordWindow : Window
     private readonly AppServices _services;
     private readonly PasswordBox _passwordBox = new();
 
-    public PasswordWindow(AppServices services, string title, string prompt)
+    public PasswordWindow(AppServices services, string titleKey, string promptKey)
     {
         _services = services;
-        Title = title;
+        LocalizationService.SetTitle(this, titleKey);
         Width = 420;
         Height = 210;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Content = BuildContent(prompt);
+        Content = BuildContent(promptKey);
         _services.Theme.Attach(this, ThemeService.CategoryOther);
         Loaded += (_, _) => _passwordBox.Focus();
     }
 
     public bool Verified { get; private set; }
 
-    private UIElement BuildContent(string prompt)
+    private UIElement BuildContent(string promptKey)
     {
         var grid = new Grid { Margin = new Thickness(24) };
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -35,10 +35,10 @@ public sealed class PasswordWindow : Window
 
         var label = new TextBlock
         {
-            Text = prompt,
             Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
             Margin = new Thickness(0, 0, 0, 6)
         };
+        LocalizationService.SetText(label, promptKey);
         Grid.SetRow(label, 0);
         grid.Children.Add(label);
 
@@ -52,18 +52,18 @@ public sealed class PasswordWindow : Window
         };
         var cancel = new Button
         {
-            Content = "取消",
             Style = (Style)FindResource("SecondaryButton"),
             Margin = new Thickness(6)
         };
+        LocalizationService.SetContent(cancel, UiText.Cancel);
         cancel.Click += (_, _) => Close();
         var ok = new Button
         {
-            Content = "确定",
             Style = (Style)FindResource("PrimaryButton"),
             MinWidth = 92,
             Margin = new Thickness(6)
         };
+        LocalizationService.SetContent(ok, UiText.Ok);
         ok.Click += (_, _) => Verify();
         buttons.Children.Add(cancel);
         buttons.Children.Add(ok);
@@ -85,7 +85,7 @@ public sealed class PasswordWindow : Window
                  && _services.Passwords.RegisterCtrlL())
         {
             Verified = true;
-            MessageBox.Show(this, "备用通道已激活！", "提示",
+            MessageBox.Show(this, UiText.BackupUnlocked, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Close();
         }
@@ -95,13 +95,13 @@ public sealed class PasswordWindow : Window
     {
         if (string.IsNullOrEmpty(_passwordBox.Password))
         {
-            MessageBox.Show(this, "密码不能为空！", "错误",
+            MessageBox.Show(this, UiText.PasswordCannotBeEmpty, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
         if (!_services.Passwords.VerifyAndUnlock(_passwordBox.Password))
         {
-            MessageBox.Show(this, "密码错误！", "错误",
+            MessageBox.Show(this, UiText.IncorrectPassword, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             _passwordBox.Clear();
             _passwordBox.Focus();

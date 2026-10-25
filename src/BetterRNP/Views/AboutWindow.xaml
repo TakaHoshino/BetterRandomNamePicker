@@ -1,0 +1,90 @@
+<Window x:Class="BetterRNP.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Ui.AboutBetterrnp}"
+        Width="610"
+        Height="410"
+        MinWidth="560"
+        MinHeight="380"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="26,24,26,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Image Source="pack://application:,,,/BetterRNP;component/Assets/BetterRNP-512.png"
+                   Width="96"
+                   Height="96"
+                   VerticalAlignment="Top"
+                   RenderOptions.BitmapScalingMode="HighQuality"
+                   SnapsToDevicePixels="True" />
+
+            <StackPanel Grid.Column="2">
+                <TextBlock x:Name="ProductTitle"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Tag="__i18n_ignore__" />
+                <TextBlock x:Name="InternalVersionText"
+                           Margin="0,7,0,0"
+                           Tag="__i18n_ignore__"
+                           Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+
+                <TextBlock x:Name="RuntimeText"
+                           Margin="0,30,0,0"
+                           Tag="__i18n_ignore__"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="EnvironmentText"
+                           Margin="0,4,0,0"
+                           Tag="__i18n_ignore__"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="InstallTypeText"
+                           Margin="0,4,0,0"
+                           Tag="__i18n_ignore__"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Margin="0,28,0,0"
+                           Text="{DynamicResource Ui.PoweredByTheBetterrnpContributorsOpenSourceProject}"
+                           TextWrapping="Wrap" />
+                <TextBlock Margin="0,4,0,0"
+                           Text="{DynamicResource Ui.Copyright2026BetterrnpContributorsApacheLicense20}"
+                           TextWrapping="Wrap" />
+                <DockPanel Margin="0,12,0,0">
+                    <TextBlock x:Name="RepositoryLabel"
+                               Text="{DynamicResource Ui.Repository}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Margin="4,0,0,0"
+                               TextWrapping="Wrap">
+                        <Hyperlink x:Name="RepositoryLink"
+                                   NavigateUri="https://github.com/TakaHoshino/BetterRandomNamePicker"
+                                   RequestNavigate="RepositoryLink_RequestNavigate">https://github.com/TakaHoshino/BetterRandomNamePicker</Hyperlink>
+                    </TextBlock>
+                </DockPanel>
+            </StackPanel>
+        </Grid>
+
+        <DockPanel Grid.Row="1" Margin="0,18,0,0">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        DockPanel.Dock="Right">
+                <Button Content="{DynamicResource Ui.CopyAndClose}"
+                        Style="{StaticResource PrimaryButton}"
+                        MinWidth="120"
+                        Click="CopyAndClose_Click" />
+                <Button Content="{DynamicResource Ui.CloseC}"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="105"
+                        IsCancel="True"
+                        Click="Close_Click" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

@@ -26,12 +26,16 @@ public partial class LogWindow : Window
         _services.Theme.Attach(this, ThemeService.CategorySettings);
 
         EntriesGrid.ItemsSource = _visible;
-        LevelCombo.ItemsSource = new[] { "全部", "信息", "警告", "错误" };
-        LevelCombo.SelectedIndex = 0;
+        RefreshLevelOptions();
 
         _ready = true;
         _services.Log.EntryWritten += OnEntryWritten;
-        Closed += (_, _) => _services.Log.EntryWritten -= OnEntryWritten;
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) =>
+        {
+            _services.Log.EntryWritten -= OnEntryWritten;
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        };
         Reload();
     }
 
@@ -62,6 +66,29 @@ public partial class LogWindow : Window
     }
 
     private void Filter_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        var selected = LevelCombo.SelectedIndex;
+        RefreshLevelOptions();
+        LevelCombo.SelectedIndex = selected;
+        UpdateStatus();
+    }
+
+    private void RefreshLevelOptions()
+    {
+        LevelCombo.ItemsSource = new[]
+        {
+            LocalizationService.Get(UiText.AllLevels),
+            LocalizationService.Get(UiText.InformationLevel),
+            LocalizationService.Get(UiText.WarningLevel),
+            LocalizationService.Get(UiText.ErrorLevel)
+        };
+        if (LevelCombo.SelectedIndex < 0)
+        {
+            LevelCombo.SelectedIndex = 0;
+        }
+    }
 
     private void Filter_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
 
@@ -148,8 +175,12 @@ public partial class LogWindow : Window
     }
 
     private void UpdateStatus()
-        => StatusText.Text =
-            $"共 {_all.Count} 条，显示 {_visible.Count} 条 · {FormatSize(_services.Log.GetFileSize())} · {_services.Log.LogFile}";
+        => StatusText.Text = LocalizationService.Format(
+            UiText.LogCountFormat,
+            _all.Count,
+            _visible.Count,
+            FormatSize(_services.Log.GetFileSize()),
+            _services.Log.LogFile);
 
     private static string FormatSize(long bytes) => bytes switch
     {
@@ -170,7 +201,10 @@ public partial class LogWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"无法打开日志目录：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.OpenLogFolderFailedFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -179,8 +213,8 @@ public partial class LogWindow : Window
     {
         var dialog = new SaveFileDialog
         {
-            Title = "导出日志",
-            Filter = "文本文件 (*.txt)|*.txt",
+            Title = LocalizationService.Get(UiText.ExportLogsTitle),
+            Filter = LocalizationService.Get(UiText.TextFileFilter),
             FileName = $"BetterRNP_Modifylog_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
         };
         if (dialog.ShowDialog(this) != true)
@@ -196,17 +230,23 @@ public partial class LogWindow : Window
             }
             else
             {
-                File.WriteAllText(dialog.FileName, "暂无日志记录");
+                File.WriteAllText(dialog.FileName, LocalizationService.Get(UiText.NoLogEntries));
             }
             _services.Log.Write(dialog.FileName, "导出日志");
-            MessageBox.Show(this, $"日志已成功导出到：\n{dialog.FileName}", "导出成功",
+            MessageBox.Show(
+                this,
+                LocalizationService.Get(UiText.LogExportedTo) + "\n" + dialog.FileName,
+                UiText.ExportedSuccessfully,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Reload();
         }
         catch (Exception ex)
         {
             _services.Log.WriteException("EXPORT_LOG_ERROR", ex);
-            MessageBox.Show(this, $"导出失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ExportFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -215,8 +255,8 @@ public partial class LogWindow : Window
     {
         var result = MessageBox.Show(
             this,
-            "确定要清空当前日志文件吗？\n历史归档（Modifylog.1.txt 等）不会被删除。",
-            "清空日志",
+            UiText.ClearLogConfirmation,
+            UiText.ClearLogTitle,
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
         if (result != MessageBoxResult.Yes)
@@ -226,7 +266,7 @@ public partial class LogWindow : Window
 
         if (!_services.Log.Clear())
         {
-            MessageBox.Show(this, "清空日志失败，文件可能正被其他程序占用。", "错误",
+            MessageBox.Show(this, UiText.ClearLogFailed, UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

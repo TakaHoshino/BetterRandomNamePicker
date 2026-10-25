@@ -21,9 +21,14 @@ public static class UpdatePresenter
                 services.Log.Write($"当前已是最新版本 {UpdateService.GetCurrentTag()}", "UPDATE_CHECK");
                 if (userInitiated)
                 {
-                    MessageBox.Show(owner,
-                        $"当前已是最新版本（{UpdateService.GetCurrentTag()}）。",
-                        "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(
+                        owner,
+                        LocalizationService.Format(
+                            UiText.LatestVersionMessageFormat,
+                            UpdateService.GetCurrentTag()),
+                        UiText.CheckForUpdates,
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
                 return result;
             }
@@ -46,8 +51,10 @@ public static class UpdatePresenter
             if (userInitiated)
             {
                 MessageBox.Show(owner,
-                    "检查更新失败：网络异常或请求超时。\n可在设置中切换为 gh-proxy 代理源后重试。",
-                    "检查更新", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    UiText.UpdateCheckNetworkFailure,
+                    UiText.CheckForUpdates,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
             return null;
         }
@@ -57,9 +64,12 @@ public static class UpdatePresenter
             if (userInitiated)
             {
                 var detail = ex is HttpRequestException { StatusCode: HttpStatusCode.NotFound }
-                    ? "GitHub 仓库尚未发布正式 Release。"
+                    ? LocalizationService.Get(UiText.NoPublishedRelease)
                     : ex.Message;
-                MessageBox.Show(owner, $"检查更新失败：{detail}", "检查更新",
+                MessageBox.Show(
+                    owner,
+                    LocalizationService.Format(UiText.UpdateCheckFailureFormat, detail),
+                    UiText.CheckForUpdates,
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             return null;

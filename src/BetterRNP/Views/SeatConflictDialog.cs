@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using BetterRNP.Core;
 
 namespace BetterRNP.Views;
 
@@ -15,7 +16,7 @@ public sealed class SeatConflictDialog : Window
 {
     private SeatConflictDialog(string message)
     {
-        Title = "座位越界确认";
+        LocalizationService.SetTitle(this, UiText.SeatConflictTitle);
         Width = 560;
         Height = 250;
         ResizeMode = ResizeMode.NoResize;
@@ -48,22 +49,22 @@ public sealed class SeatConflictDialog : Window
         grid.Children.Add(text);
 
         var buttons = new UniformGrid { Columns = 3 };
-        buttons.Children.Add(CreateButton("移除越界座位", SeatConflictChoice.Remove));
-        buttons.Children.Add(CreateButton("取消并恢复原行列", SeatConflictChoice.Cancel));
-        buttons.Children.Add(CreateButton("自动扩展行列", SeatConflictChoice.Expand));
+        buttons.Children.Add(CreateButton(UiText.RemoveOutOfRangeSeats, SeatConflictChoice.Remove));
+        buttons.Children.Add(CreateButton(UiText.CancelAndRestoreDimensions, SeatConflictChoice.Cancel));
+        buttons.Children.Add(CreateButton(UiText.ExpandDimensions, SeatConflictChoice.Expand));
         Grid.SetRow(buttons, 1);
         grid.Children.Add(buttons);
         return grid;
     }
 
-    private Button CreateButton(string text, SeatConflictChoice choice)
+    private Button CreateButton(string resourceKey, SeatConflictChoice choice)
     {
         var button = new Button
         {
-            Content = text,
             Style = (Style)FindResource("SecondaryButton"),
             Margin = new Thickness(5)
         };
+        LocalizationService.SetContent(button, resourceKey);
         button.Click += (_, _) =>
         {
             Choice = choice;

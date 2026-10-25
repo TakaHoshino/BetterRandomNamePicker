@@ -26,7 +26,7 @@ public sealed class PluginPickModeAdapter : IPickMode
             message => MessageBox.Show(
                 owner,
                 message,
-                "插件提示",
+                UiText.PluginNotice,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information));
     }
@@ -45,7 +45,7 @@ public sealed class PluginPickModeAdapter : IPickMode
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"插件模式校验异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
-            return "插件模式校验异常";
+        return LocalizationService.Get(UiText.PluginModeValidationFailed);
         }
     }
 
@@ -62,7 +62,7 @@ public sealed class PluginPickModeAdapter : IPickMode
             catch (Exception ex)
             {
                 _services.Log.Write(LogLevel.Error, $"插件模式候选异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
-                return "插件模式异常";
+        return LocalizationService.Get(UiText.PluginModeError);
             }
         };
     }
@@ -76,7 +76,10 @@ public sealed class PluginPickModeAdapter : IPickMode
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
-            MessageBox.Show(owner, $"插件模式按钮执行失败：{ex.Message}", "插件错误",
+            MessageBox.Show(
+                owner,
+                LocalizationService.Format(UiText.PluginModeActionFailedFormat, ex.Message),
+                UiText.PluginError,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -90,7 +93,10 @@ public sealed class PluginPickModeAdapter : IPickMode
         catch (Exception ex)
         {
             _services.Log.Write(LogLevel.Error, $"插件模式按钮异常 {DisplayName}: {ex}", "PLUGIN_MODE_ERROR");
-            MessageBox.Show(owner, $"插件模式按钮执行失败：{ex.Message}", "插件错误",
+            MessageBox.Show(
+                owner,
+                LocalizationService.Format(UiText.PluginModeActionFailedFormat, ex.Message),
+                UiText.PluginError,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

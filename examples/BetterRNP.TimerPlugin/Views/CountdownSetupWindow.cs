@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using BetterRNP.PluginSdk.Abstractions;
+using BetterRNP.TimerPlugin;
 
 namespace BetterRNP.TimerPlugin.Views;
 
@@ -23,9 +25,17 @@ public sealed class CountdownSetupWindow : Window
     private readonly TimeField _minutes;
     private readonly TimeField _seconds;
     private readonly TextBlock _error;
+    private readonly IPluginLocalizationContext? _localization;
+    private readonly List<TextBlock> _fieldCaptions = new();
+    private readonly List<(Button Button, string Source, int Seconds)> _presetButtons = new();
+    private readonly TextBlock _titleText;
+    private readonly Button _closeButton;
+    private readonly Button _cancelButton;
+    private readonly Button _startButton;
 
-    public CountdownSetupWindow()
+    public CountdownSetupWindow(IPluginLocalizationContext? localization = null)
     {
+        _localization = localization;
         Ui.ApplyPopupWindow(this);
         Width = 320;
         SizeToContent = SizeToContent.Height;
@@ -55,9 +65,10 @@ public sealed class CountdownSetupWindow : Window
         foreach (var (label, seconds) in Presets)
         {
             var value = seconds;
-            var chip = Ui.TextButton(label, ButtonTone.Chip, () => ApplyPreset(value));
+            var chip = Ui.TextButton(localization.T(label), ButtonTone.Chip, () => ApplyPreset(value));
             chip.Margin = new Thickness(3, 0, 3, 0);
             presets.Children.Add(chip);
+            _presetButtons.Add((chip, label, value));
         }
 
         _error = new TextBlock
@@ -75,12 +86,33 @@ public sealed class CountdownSetupWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 4, 0, 0)
         };
-        var cancel = Ui.TextButton("取消", ButtonTone.Secondary, () => CloseWith(false));
-        cancel.Margin = new Thickness(0, 0, 8, 0);
-        footer.Children.Add(cancel);
-        footer.Children.Add(Ui.TextButton("开始倒计时", ButtonTone.Primary, Confirm));
+        _cancelButton = Ui.TextButton(
+            localization.T("取消"),
+            ButtonTone.Secondary,
+            () => CloseWith(false));
+        _cancelButton.Margin = new Thickness(0, 0, 8, 0);
+        _startButton = Ui.TextButton(
+            localization.T("开始倒计时"),
+            ButtonTone.Primary,
+            Confirm);
+        footer.Children.Add(_cancelButton);
+        footer.Children.Add(_startButton);
 
         var body = new StackPanel();
+        _titleText = new TextBlock
+        {
+            Text = localization.T("设置倒计时"),
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Ui.Ink,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _closeButton = Ui.IconButton(
+            Ui.CreateIcon(Icons.Close, IconPaint.Stroke, 9, 1.4),
+            localization.T("关闭"),
+            () => CloseWith(false),
+            24,
+            Ui.CloseHover);
         body.Children.Add(BuildHeader());
         body.Children.Add(fields);
         body.Children.Add(presets);
@@ -93,6 +125,17 @@ public sealed class CountdownSetupWindow : Window
         Ui.CenterOnScreen(this);
 
         PreviewKeyDown += OnPreviewKeyDown;
+        if (_localization is not null)
+        {
+            _localization.LanguageChanged += OnLanguageChanged;
+        }
+        Closed += (_, _) =>
+        {
+            if (_localization is not null)
+            {
+                _localization.LanguageChanged -= OnLanguageChanged;
+            }
+        };
         Loaded += (_, _) =>
         {
             _minutes.Box.Focus();
@@ -108,31 +151,16 @@ public sealed class CountdownSetupWindow : Window
 
     private UIElement BuildHeader()
     {
-        var title = new TextBlock
-        {
-            Text = "设置倒计时",
-            FontSize = 13,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = Ui.Ink,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        var close = Ui.IconButton(
-            Ui.CreateIcon(Icons.Close, IconPaint.Stroke, 9, 1.4),
-            "关闭",
-            () => CloseWith(false),
-            24,
-            Ui.CloseHover);
-        close.HorizontalAlignment = HorizontalAlignment.Right;
-        close.VerticalAlignment = VerticalAlignment.Center;
+        _closeButton.HorizontalAlignment = HorizontalAlignment.Right;
+        _closeButton.VerticalAlignment = VerticalAlignment.Center;
 
         var header = new Grid { Height = 24 };
-        header.Children.Add(title);
-        header.Children.Add(close);
+        header.Children.Add(_titleText);
+        header.Children.Add(_closeButton);
         return header;
     }
 
-    private static FrameworkElement BuildField(TimeField field, string label)
+    private FrameworkElement BuildField(TimeField field, string label)
     {
         var chrome = new Border
         {
@@ -152,12 +180,12 @@ public sealed class CountdownSetupWindow : Window
         };
         spinner.Children.Add(Ui.IconButton(
             Ui.CreateIcon(Icons.ChevronUp, IconPaint.Stroke, 8, 1.4),
-            "增加",
+            _localization.T("增加"),
             () => field.Step(1),
             20));
         spinner.Children.Add(Ui.IconButton(
             Ui.CreateIcon(Icons.ChevronDown, IconPaint.Stroke, 8, 1.4),
-            "减少",
+            _localization.T("减少"),
             () => field.Step(-1),
             20));
 
@@ -167,12 +195,13 @@ public sealed class CountdownSetupWindow : Window
 
         var caption = new TextBlock
         {
-            Text = label,
+            Text = _localization.T(label),
             FontSize = 11,
             Foreground = Ui.Subtle,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 23, 0)
         };
+        _fieldCaptions.Add(caption);
 
         var stack = new StackPanel();
         stack.Children.Add(row);
@@ -216,7 +245,7 @@ public sealed class CountdownSetupWindow : Window
         var total = new TimeSpan(_hours.Commit(), _minutes.Commit(), _seconds.Commit());
         if (total <= TimeSpan.Zero)
         {
-            _error.Text = "请输入大于 0 的倒计时时长";
+            _error.Text = _localization.T("请输入大于 0 的倒计时时长");
             _minutes.Box.Focus();
             _minutes.Box.SelectAll();
             return;
@@ -237,6 +266,27 @@ public sealed class CountdownSetupWindow : Window
         {
             // 非模态显示时 DialogResult 不可写，直接关闭窗口。
             Close();
+        }
+    }
+
+    private void OnLanguageChanged(object? sender, PluginLanguageChangedEventArgs e)
+    {
+        _titleText.Text = _localization.T("设置倒计时");
+        _closeButton.ToolTip = _localization.T("关闭");
+        _cancelButton.Content = _localization.T("取消");
+        _startButton.Content = _localization.T("开始倒计时");
+        var captions = new[] { "时", "分", "秒" };
+        for (var index = 0; index < Math.Min(captions.Length, _fieldCaptions.Count); index++)
+        {
+            _fieldCaptions[index].Text = _localization.T(captions[index]);
+        }
+        foreach (var preset in _presetButtons)
+        {
+            preset.Button.Content = _localization.T(preset.Source);
+        }
+        if (!string.IsNullOrWhiteSpace(_error.Text))
+        {
+            _error.Text = _localization.T("请输入大于 0 的倒计时时长");
         }
     }
 

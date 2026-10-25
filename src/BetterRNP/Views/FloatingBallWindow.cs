@@ -20,6 +20,8 @@ public sealed class FloatingBallWindow : Window
     private readonly AppServices _services;
     private readonly App _app;
     private readonly TextBlock _label;
+    private readonly Border _ballBorder;
+    private readonly SolidColorBrush _backgroundBrush;
     private RollingPicker? _picker;
 
     public FloatingBallWindow(AppServices services, App app)
@@ -43,7 +45,7 @@ public sealed class FloatingBallWindow : Window
 
         _label = new TextBlock
         {
-            Text = "抽取",
+            Text = LocalizationService.Get(UiText.Pick),
             Foreground = Brushes.White,
             FontSize = fontSize,
             FontWeight = FontWeights.Bold,
@@ -52,13 +54,15 @@ public sealed class FloatingBallWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
-        Content = new Border
+        _backgroundBrush = new SolidColorBrush(Color.FromArgb((byte)opacity, 0, 120, 215));
+        _ballBorder = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb((byte)opacity, 0, 120, 215)),
+            Background = _backgroundBrush,
             CornerRadius = new CornerRadius(radius),
             Padding = new Thickness(10),
             Child = _label
         };
+        Content = _ballBorder;
         ContextMenu = BuildContextMenu();
         _app.Plugins.PluginsChanged += OnPluginsChanged;
 
@@ -67,13 +71,80 @@ public sealed class FloatingBallWindow : Window
         Top = Math.Max(0, workArea.Bottom - Height - 50);
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
-        SourceInitialized += (_, _) => HideFromAltTab();
+        SizeChanged += (_, _) => PublishState();
+        LocationChanged += (_, _) => PublishState();
+        IsVisibleChanged += (_, _) => PublishState();
+        SourceInitialized += (_, _) =>
+        {
+            HideFromAltTab();
+            PublishState();
+        };
         Closed += (_, _) =>
         {
+            PublishState(isVisible: false);
             _app.Plugins.PluginsChanged -= OnPluginsChanged;
             _picker?.Stop();
             _picker = null;
         };
+    }
+
+    public void UpdateAppearance(int radius, int opacity)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => UpdateAppearance(radius, opacity)));
+            return;
+        }
+
+        radius = Math.Max(ConfigService.FloatingBallRadiusMinimum, radius);
+        opacity = Math.Clamp(opacity, 0, 255);
+        var size = radius * 2.0;
+        var centerX = Left + Width / 2;
+        var centerY = Top + Height / 2;
+
+        Width = size;
+        Height = size;
+        _label.FontSize = Math.Clamp(radius * 0.4, 12, 36);
+        _ballBorder.CornerRadius = new CornerRadius(radius);
+        _backgroundBrush.Color = Color.FromArgb((byte)opacity, 0, 120, 215);
+
+        var workArea = SystemParameters.WorkArea;
+        Left = Math.Clamp(
+            centerX - size / 2,
+            workArea.Left,
+            Math.Max(workArea.Left, workArea.Right - size));
+        Top = Math.Clamp(
+            centerY - size / 2,
+            workArea.Top,
+            Math.Max(workArea.Top, workArea.Bottom - size));
+        PublishState();
+    }
+
+    public void RefreshLanguage()
+    {
+        _label.Text = LocalizationService.Get(UiText.Pick);
+        ContextMenu = BuildContextMenu();
+    }
+
+    private void PublishState(bool? isVisible = null)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !GetWindowRect(handle, out var rectangle))
+        {
+            if (isVisible == false && _services.FloatingBallState.Current is { } previous)
+            {
+                _services.FloatingBallState.Publish(previous with { IsVisible = false });
+            }
+            return;
+        }
+
+        _services.FloatingBallState.Publish(new FloatingBallRuntimeState(
+            rectangle.Left,
+            rectangle.Top,
+            rectangle.Right - rectangle.Left,
+            rectangle.Bottom - rectangle.Top,
+            $"#{_backgroundBrush.Color.R:X2}{_backgroundBrush.Color.G:X2}{_backgroundBrush.Color.B:X2}",
+            isVisible ?? IsVisible));
     }
 
     private void HideFromAltTab()
@@ -105,7 +176,7 @@ public sealed class FloatingBallWindow : Window
     private ContextMenu BuildContextMenu()
     {
         var menu = new ContextMenu();
-        var pick = new MenuItem { Header = "随机抽取" };
+        var pick = new MenuItem { Header = LocalizationService.Get(UiText.RandomPick) };
         pick.Click += (_, _) => PerformRandomPick();
         menu.Items.Add(pick);
 
@@ -116,10 +187,10 @@ public sealed class FloatingBallWindow : Window
             {
                 Header = mode.Id switch
                 {
-                    "name_list" => "配置名单",
-                    "number" => "数字设置",
-                    "seat" => "座位设置",
-                    _ => "模式设置"
+                    "name_list" => LocalizationService.Get(UiText.EditNames),
+                    "number" => LocalizationService.Get(UiText.NumberSettings),
+                    "seat" => LocalizationService.Get(UiText.SeatSettings),
+                    _ => LocalizationService.Get(UiText.ModeSettings)
                 }
             };
             config.Click += (_, _) =>
@@ -146,18 +217,18 @@ public sealed class FloatingBallWindow : Window
             menu.Items.Add(new Separator());
             foreach (var command in ballCommands)
             {
-                var item = new MenuItem { Header = command.Title };
+                var item = new MenuItem { Header = command.DisplayTitle };
                 item.Click += (_, _) => _app.Plugins.ExecuteCommand(command, this);
                 menu.Items.Add(item);
             }
         }
 
         menu.Items.Add(new Separator());
-        var settings = new MenuItem { Header = "悬浮球设置" };
+        var settings = new MenuItem { Header = LocalizationService.Get(UiText.FloatingBallSettings) };
         settings.Click += (_, _) => _app.ShellWindow.ShowSettingsWindow();
         menu.Items.Add(settings);
         menu.Items.Add(new Separator());
-        var close = new MenuItem { Header = "关闭" };
+        var close = new MenuItem { Header = LocalizationService.Get(UiText.Close) };
         close.Click += (_, _) =>
         {
             _services.Log.Write("通过悬浮球菜单关闭悬浮球", "BALL_HIDDEN");
@@ -190,7 +261,7 @@ public sealed class FloatingBallWindow : Window
         if (scheme is null)
         {
             _services.Log.Write(LogLevel.Warn, "当前没有可用方案", "悬浮球抽取失败");
-            _label.Text = "无方案";
+            _label.Text = LocalizationService.Get(UiText.NoScheme);
             return;
         }
 
@@ -198,7 +269,7 @@ public sealed class FloatingBallWindow : Window
         if (mode is null)
         {
             _services.Log.Write(LogLevel.Warn, $"方案={scheme.Name}", "悬浮球模式无效");
-            _label.Text = "无效模式";
+            _label.Text = LocalizationService.Get(UiText.InvalidMode);
             return;
         }
 
@@ -211,9 +282,9 @@ public sealed class FloatingBallWindow : Window
                 "悬浮球抽取受阻");
             _label.Text = mode.Id switch
             {
-                "name_list" => "损坏",
-                "number" => "无范围",
-                "seat" => "无座位",
+                "name_list" => LocalizationService.Get(UiText.Damaged),
+                "number" => LocalizationService.Get(UiText.NoRange),
+                "seat" => LocalizationService.Get(UiText.NoSeats),
                 _ => block
             };
             return;
@@ -262,6 +333,18 @@ public sealed class FloatingBallWindow : Window
         }
         return value;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr window, out RECT rectangle);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);

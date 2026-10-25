@@ -11,17 +11,19 @@ public partial class UpdatePromptWindow : Window
     {
         _result = result;
         InitializeComponent();
-        SummaryText.Text =
-            $"发现新版本 {result.LatestTag}（当前 {UpdateService.GetCurrentTag()}），是否更新？";
+        SummaryText.Text = LocalizationService.Format(
+            UiText.UpdateAvailableQuestionFormat,
+            result.LatestTag,
+            UpdateService.GetCurrentTag());
         ReleaseNotesBox.Text = string.IsNullOrWhiteSpace(result.ReleaseNotes)
-            ? "本次 Release 未提供说明。"
+            ? LocalizationService.Get(UiText.NoReleaseNotes)
             : result.ReleaseNotes;
         SelfContainedSizeText.Text = FormatSize(result.SelfContainedAsset?.SizeBytes);
         FrameworkSizeText.Text = FormatSize(result.FrameworkDependentAsset?.SizeBytes);
         var detectedKind = UpdateService.DetectCurrentInstallationKind();
         DetectedTypeText.Text = detectedKind == UpdateAssetKind.SelfContained
-            ? "已检测到当前为自包含版，默认选择自包含更新包。"
-            : "已检测到当前为框架依赖版，默认选择框架依赖更新包。";
+            ? LocalizationService.Get(UiText.SelfContainedDetected)
+            : LocalizationService.Get(UiText.FrameworkDependentDetected);
 
         SelfContainedRadio.IsEnabled = result.SelfContainedAsset is not null;
         FrameworkRadio.IsEnabled = result.FrameworkDependentAsset is not null;
@@ -52,7 +54,9 @@ public partial class UpdatePromptWindow : Window
         : _result.FrameworkDependentAsset;
 
     private static string FormatSize(long? bytes)
-        => bytes is > 0 ? $"（约 {bytes.Value / 1048576.0:F0} MB）" : string.Empty;
+        => bytes is > 0
+            ? LocalizationService.Format(UiText.EstimatedSizeFormat, bytes.Value / 1048576.0)
+            : string.Empty;
 
     private void UpdateButton_Click(object sender, RoutedEventArgs e)
     {
@@ -61,7 +65,7 @@ public partial class UpdatePromptWindow : Window
             : UpdateAssetKind.FrameworkDependent;
         if (SelectedAsset is null)
         {
-            MessageBox.Show(this, "所选安装包尚未上传到 Release。", "检查更新",
+            MessageBox.Show(this, UiText.SelectedInstallerNotUploaded, UiText.CheckForUpdates,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

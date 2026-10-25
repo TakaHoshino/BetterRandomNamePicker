@@ -15,6 +15,17 @@ public partial class App : Application
     private SingleInstanceGuard? _instanceGuard;
     private FloatingBallWindow? _floatingBall;
     private NativeTrayService? _tray;
+    private readonly bool _suppressStartup;
+
+    public App()
+    {
+    }
+
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    public App(bool suppressStartup)
+    {
+        _suppressStartup = suppressStartup;
+    }
 
     public AppServices Services { get; private set; } = null!;
     public MainWindow ShellWindow { get; private set; } = null!;
@@ -24,6 +35,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (_suppressStartup)
+        {
+            return;
+        }
         _instanceGuard = new SingleInstanceGuard(InstanceMutexName, InstanceShowEventName);
         if (!_instanceGuard.IsPrimary)
         {
@@ -37,6 +52,13 @@ public partial class App : Application
             () => Dispatcher.BeginInvoke(new Action(ShowMainWindow)));
 
         Services = AppServices.Create();
+        var cacheCleanResult = PluginCacheService.Clear(Services.Paths);
+        Services.Log.Write(
+            cacheCleanResult.Success ? LogLevel.Info : LogLevel.Warn,
+            $"已清理 {cacheCleanResult.RemovedEntries} 项，失败 {cacheCleanResult.FailedEntries} 项",
+            "PLUGIN_CACHE_CLEANED");
+        LocalizationService.Initialize(Services.Config.Language);
+        LocalizationService.LanguageChanged += OnLanguageChanged;
         Services.Log.Write(
             UpdateService.DetectCurrentInstallationKind() == UpdateAssetKind.SelfContained
                 ? "自包含版"
@@ -44,7 +66,8 @@ public partial class App : Application
             "UPDATE_INSTALL_TYPE");
         Services.Log.Write(
             $"{UpdateService.GetCurrentTag()}｜{Environment.OSVersion.VersionString}｜"
-            + $"{(Environment.Is64BitProcess ? "64" : "32")} 位｜数据目录 {Services.Paths.Root}",
+            + $"{(Environment.Is64BitProcess ? "64" : "32")} 位｜数据目录 {Services.Paths.Root}"
+            + $"｜设置 {Services.Settings.DisplayPath}",
             "APP_START");
         WireCrashLogging();
 
@@ -156,14 +179,19 @@ public partial class App : Application
 
     public bool IsFloatingBallVisible => _floatingBall is { IsVisible: true };
 
+    public void UpdateFloatingBallAppearance(int radius, int opacity)
+    {
+        _floatingBall?.UpdateAppearance(radius, opacity);
+    }
+
     public void ExitApplication(bool confirm)
     {
         if (confirm)
         {
             var result = MessageBox.Show(
                 ShellWindow,
-                "确定要完全退出 BetterRNP 吗？\n退出后悬浮球也将关闭。",
-                "确认退出",
+                UiText.ExitConfirmationMessage,
+                UiText.ExitConfirmationTitle,
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes)
@@ -184,8 +212,18 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
         _instanceGuard?.Dispose();
         _instanceGuard = null;
         base.OnExit(e);
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _floatingBall?.RefreshLanguage();
+            ShellWindow?.RefreshLanguage();
+        }));
     }
 }

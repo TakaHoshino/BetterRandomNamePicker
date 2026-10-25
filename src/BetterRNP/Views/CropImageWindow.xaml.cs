@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using BetterRNP.Core;
 
 namespace BetterRNP.Views;
 
@@ -158,9 +159,12 @@ public partial class CropImageWindow : Window
 
     private void UpdateSelectionText()
     {
-        SelectionText.Text =
-            $"选区：{_normalizedCrop.X:P1}, {_normalizedCrop.Y:P1}  "
-            + $"宽 {_normalizedCrop.Width:P1}  高 {_normalizedCrop.Height:P1}";
+        SelectionText.Text = LocalizationService.Format(
+            UiText.SelectionFormat,
+            _normalizedCrop.X,
+            _normalizedCrop.Y,
+            _normalizedCrop.Width,
+            _normalizedCrop.Height);
     }
 
     private static Rect NormalizeCrop(Rect crop)
@@ -183,7 +187,7 @@ public partial class CropImageWindow : Window
     {
         if (SelectionBox.Width < 4 || SelectionBox.Height < 4)
         {
-            MessageBox.Show(this, "请拖拽选择一个有效的裁切区域。", "裁切",
+            MessageBox.Show(this, UiText.InvalidCropSelection, UiText.Crop,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

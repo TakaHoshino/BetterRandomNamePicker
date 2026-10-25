@@ -70,16 +70,16 @@ public sealed class ThemeService
         CategorySeat, CategorySettings, CategoryOther
     };
 
-    public static readonly IReadOnlyDictionary<string, string> CategoryLabels =
+    public static readonly IReadOnlyDictionary<string, string> CategoryLabelKeys =
         new Dictionary<string, string>
         {
-            [CategoryMain] = "主窗口",
-            [CategoryConfig] = "配置名单",
-            [CategoryScheme] = "方案管理",
-            [CategoryNumber] = "数字设置",
-            [CategorySeat] = "座位设置",
-            [CategorySettings] = "系统设置",
-            [CategoryOther] = "其它对话框"
+            [CategoryMain] = UiText.ThemeMainWindow,
+            [CategoryConfig] = UiText.ThemeConfig,
+            [CategoryScheme] = UiText.ThemeSchemes,
+            [CategoryNumber] = UiText.ThemeNumber,
+            [CategorySeat] = UiText.ThemeSeat,
+            [CategorySettings] = UiText.ThemeSettings,
+            [CategoryOther] = UiText.ThemeOther
         };
 
     private sealed class Attachment
@@ -92,43 +92,41 @@ public sealed class ThemeService
     }
 
     private readonly AppPaths _paths;
+    private readonly ISettingsStore _settings;
     private readonly LogService _log;
-    private readonly string _backupPath;
     private readonly Dictionary<Window, Attachment> _attachments = new();
-    private JavaProperties _properties;
 
-    public ThemeService(AppPaths paths, LogService log)
+    public ThemeService(AppPaths paths, ISettingsStore settings, LogService log)
     {
         _paths = paths;
+        _settings = settings;
         _log = log;
-        _backupPath = Path.Combine(paths.LogDir, "theme.properties.bak");
-        _properties = Load();
     }
 
     public bool IsEnabled
     {
-        get => bool.TryParse(_properties.Get("enabled"), out var enabled) && enabled;
+        get => bool.TryParse(GetTheme("enabled"), out var enabled) && enabled;
         set
         {
-            _properties.Set("enabled", value.ToString().ToLowerInvariant());
+            SetTheme("enabled", value.ToString().ToLowerInvariant());
             SaveAndApply();
         }
     }
 
     public int MaskAlpha
     {
-        get => Math.Clamp(ParseInt(_properties.Get("mask"), 40), 0, 180);
+        get => Math.Clamp(ParseInt(GetTheme("mask"), 40), 0, 180);
         set
         {
-            _properties.Set("mask", Math.Clamp(value, 0, 180).ToString());
+            SetTheme("mask", Math.Clamp(value, 0, 180).ToString());
             SaveAndApply();
         }
     }
 
-    public string GlobalImageId => _properties.Get("g.image", string.Empty) ?? string.Empty;
+    public string GlobalImageId => GetTheme("g.image", string.Empty) ?? string.Empty;
 
-    public BackdropMode GlobalMode => ParseMode(_properties.Get("g.mode"));
-    public Rect GlobalCrop => ParseCrop(_properties.Get("g.crop"));
+    public BackdropMode GlobalMode => ParseMode(GetTheme("g.mode"));
+    public Rect GlobalCrop => ParseCrop(GetTheme("g.crop"));
 
     public IReadOnlyList<ThemeImage> ListImages()
     {
@@ -139,7 +137,7 @@ public sealed class ThemeService
             .Select(path =>
             {
                 var id = Path.GetFileName(path);
-                var alias = _properties.Get("name." + id, string.Empty);
+                var alias = GetTheme("name." + id, string.Empty);
                 return new ThemeImage(id, path,
                     string.IsNullOrWhiteSpace(alias) ? Path.GetFileNameWithoutExtension(path) : alias);
             })
@@ -150,7 +148,8 @@ public sealed class ThemeService
     {
         if (!IsSupportedImage(sourcePath))
         {
-            throw new InvalidOperationException("请选择 PNG、JPG、BMP、GIF 或 TIFF 图片。");
+            throw new InvalidOperationException(
+                LocalizationService.Get(UiText.ThemeUnsupportedImageFormat));
         }
 
         Directory.CreateDirectory(_paths.ThemeImagesDir);
@@ -183,18 +182,18 @@ public sealed class ThemeService
         File.Delete(path);
         if (GlobalImageId == imageId)
         {
-            _properties.Set("g.image", null);
-            _properties.Set("g.crop", null);
+            SetTheme("g.image", null);
+            SetTheme("g.crop", null);
         }
         foreach (var category in CategoryIds)
         {
             if (GetCategoryImageId(category) == imageId)
             {
-                _properties.Set(CategoryKey(category, "image"), null);
-                _properties.Set(CategoryKey(category, "crop"), null);
+                SetTheme(CategoryKey(category, "image"), null);
+                SetTheme(CategoryKey(category, "crop"), null);
             }
         }
-        _properties.Set("name." + imageId, null);
+        SetTheme("name." + imageId, null);
         SaveAndApply();
         _log.Write($"主题图片删除: {imageId}", "THEME_DELETE");
         return true;
@@ -202,69 +201,76 @@ public sealed class ThemeService
 
     public void SetGlobalImage(string? imageId)
     {
-        _properties.Set("g.image", string.IsNullOrWhiteSpace(imageId) ? null : imageId);
+        SetTheme("g.image", string.IsNullOrWhiteSpace(imageId) ? null : imageId);
         SaveAndApply();
     }
 
     public void SetGlobalMode(BackdropMode mode)
     {
-        _properties.Set("g.mode", mode.ToString());
+        SetTheme("g.mode", mode.ToString());
         SaveAndApply();
     }
 
     public void SetGlobalCrop(Rect crop)
     {
-        _properties.Set("g.crop", CropToString(crop));
+        SetTheme("g.crop", CropToString(crop));
         SaveAndApply();
     }
 
     public string? GetCategoryImageId(string category)
-        => _properties.Get(CategoryKey(category, "image"));
+        => GetTheme(CategoryKey(category, "image"));
 
     public BackdropMode GetCategoryMode(string category)
-        => ParseMode(_properties.Get(CategoryKey(category, "mode")) ?? string.Empty) is var mode
-           && _properties.Contains(CategoryKey(category, "mode")) ? mode : GlobalMode;
+        => ParseMode(GetTheme(CategoryKey(category, "mode")) ?? string.Empty) is var mode
+           && ContainsTheme(CategoryKey(category, "mode")) ? mode : GlobalMode;
 
     public Rect GetCategoryCrop(string category)
     {
         var key = CategoryKey(category, "crop");
-        return _properties.Contains(key)
-            ? ParseCrop(_properties.Get(key))
+        return ContainsTheme(key)
+            ? ParseCrop(GetTheme(key))
             : GlobalCrop;
     }
 
     public void SetCategoryImage(string category, string? imageId)
     {
-        _properties.Set(CategoryKey(category, "image"),
+        SetTheme(CategoryKey(category, "image"),
             string.IsNullOrWhiteSpace(imageId) ? null : imageId);
         SaveAndApply();
     }
 
     public void SetCategoryMode(string category, BackdropMode mode)
     {
-        _properties.Set(CategoryKey(category, "mode"), mode.ToString());
+        SetTheme(CategoryKey(category, "mode"), mode.ToString());
         SaveAndApply();
     }
 
     public void SetCategoryCrop(string category, Rect crop)
     {
-        _properties.Set(CategoryKey(category, "crop"), CropToString(crop));
+        SetTheme(CategoryKey(category, "crop"), CropToString(crop));
         SaveAndApply();
     }
 
     public void ClearCategory(string category)
     {
-        _properties.Set(CategoryKey(category, "image"), null);
-        _properties.Set(CategoryKey(category, "mode"), null);
-        _properties.Set(CategoryKey(category, "crop"), null);
+        SetTheme(CategoryKey(category, "image"), null);
+        SetTheme(CategoryKey(category, "mode"), null);
+        SetTheme(CategoryKey(category, "crop"), null);
         SaveAndApply();
     }
 
     public void Reset()
     {
-        _properties = new JavaProperties();
-        _properties.Set("enabled", "false");
-        _properties.Set("mask", "40");
+        try
+        {
+            _settings.ClearSection(SettingsSections.Theme);
+            _settings.SetString(SettingsSections.Theme, "enabled", "false");
+            _settings.SetString(SettingsSections.Theme, "mask", "40");
+        }
+        catch (Exception ex)
+        {
+            _log.Write(LogLevel.Error, $"保存主题设置失败: {ex.Message}", "THEME_SAVE_ERROR");
+        }
         SaveAndApply();
         _log.Write("主题设置已恢复默认", "THEME_RESET");
     }
@@ -413,56 +419,26 @@ public sealed class ThemeService
 
     private void SaveAndApply()
     {
-        Save();
         ApplyAll();
     }
 
-    private JavaProperties Load()
-    {
-        if (!File.Exists(_paths.ThemeConfigFile) && File.Exists(_backupPath))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(_paths.ThemeConfigFile)!);
-            File.Copy(_backupPath, _paths.ThemeConfigFile, true);
-            _log.Write("主题配置缺失，已从备份恢复", "CONFIG_RESTORE");
-        }
-        return JavaProperties.Load(_paths.ThemeConfigFile);
-    }
+    private string? GetTheme(string name, string? fallback = null)
+        => _settings.GetString(SettingsSections.Theme, name) ?? fallback;
 
-    private void Save()
+    private void SetTheme(string name, string? value)
     {
         try
         {
-            if (File.Exists(_paths.ThemeConfigFile))
-            {
-                File.Copy(_paths.ThemeConfigFile, _backupPath, true);
-            }
-
-            var categoryKeys = CategoryIds
-                .SelectMany(category => new[]
-                {
-                    CategoryKey(category, "image"),
-                    CategoryKey(category, "mode"),
-                    CategoryKey(category, "crop")
-                });
-            _properties.WriteWithSections(
-                _paths.ThemeConfigFile,
-                new[]
-                {
-                    "BetterRNP 主题设置（UTF-8，可手工编辑）",
-                    $"生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                    "图片位于 data/themes/images。"
-                },
-                new (string, IEnumerable<string>)[]
-                {
-                    ("总开关与全局背景", new[] { "enabled", "mask", "g.image", "g.mode", "g.crop" }),
-                    ("按窗口类别指定", categoryKeys)
-                });
+            _settings.SetString(SettingsSections.Theme, name, value);
         }
         catch (Exception ex)
         {
             _log.Write(LogLevel.Error, $"保存主题设置失败: {ex.Message}", "THEME_SAVE_ERROR");
         }
     }
+
+    private bool ContainsTheme(string name)
+        => _settings.HasValue(SettingsSections.Theme, name);
 
     private void OnWindowClosed(object? sender, EventArgs e)
     {

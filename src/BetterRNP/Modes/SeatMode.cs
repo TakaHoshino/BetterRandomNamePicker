@@ -18,9 +18,9 @@ public sealed class SeatMode : IPickMode
     }
 
     public string Id => "seat";
-    public string DisplayName => "座位模式";
-    public string Button1Text => "设置座位布局";
-    public string Button2Text => "查看当前设置";
+    public string DisplayName => LocalizationService.Get(UiText.Seats);
+    public string Button1Text => LocalizationService.Get(UiText.SetSeatLayout);
+    public string Button2Text => LocalizationService.Get(UiText.ViewCurrentSettings);
 
     public string? CanPick()
     {
@@ -28,7 +28,7 @@ public sealed class SeatMode : IPickMode
         var config = scheme is null ? null : _services.Schemes.GetSeatConfig(scheme.Name);
         _snapshot = config;
         return config is null || config.SelectedSeats.Count == 0
-            ? "请先设置座位并选择座位！"
+            ? LocalizationService.Get(UiText.SeatSelectionRequired)
             : null;
     }
 
@@ -51,7 +51,7 @@ public sealed class SeatMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+            MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -63,7 +63,7 @@ public sealed class SeatMode : IPickMode
         var scheme = _currentScheme();
         if (scheme is null)
         {
-            MessageBox.Show(owner, "请先选择一个方案！", "提示",
+            MessageBox.Show(owner, UiText.PleaseSelectScheme, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -71,16 +71,25 @@ public sealed class SeatMode : IPickMode
         var config = _services.Schemes.GetSeatConfig(scheme.Name);
         if (config is null)
         {
-            MessageBox.Show(owner, "当前方案尚未设置座位！", "提示",
+            MessageBox.Show(
+                owner,
+                UiText.NoSeatsAreConfiguredForThisScheme,
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         _services.Log.Write(
             $"{scheme.Name}-行数={config.Rows},列数={config.Cols},已选座位数={config.SelectedSeats.Count}",
             "查看座位设置");
-        MessageBox.Show(owner,
-            $"当前座位设置：行数={config.Rows}，列数={config.Cols}，已选座位数={config.SelectedSeats.Count}\n"
-            + "（修改请在“设置座位布局”中保存）",
-            "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(
+            owner,
+            LocalizationService.Format(
+                UiText.CurrentSeatSettingsFormat,
+                config.Rows,
+                config.Cols,
+                config.SelectedSeats.Count),
+            UiText.Notice,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 }

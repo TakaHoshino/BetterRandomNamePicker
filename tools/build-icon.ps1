@@ -104,7 +104,16 @@ finally {
 $assetsDir = Join-Path $repo 'src\BetterRNP\Assets'
 New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
 Copy-Item -LiteralPath $icoPath -Destination (Join-Path $assetsDir 'BetterRNP.ico') -Force
+foreach ($size in @(256, 512, 1024)) {
+    Copy-Item `
+        -LiteralPath (Join-Path $pngDir "betterrnp-icon-$size.png") `
+        -Destination (Join-Path $assetsDir "BetterRNP-$size.png") `
+        -Force
+}
 
 Write-Output "ICON_SVG $(Join-Path $iconDir 'betterrnp-icon.svg')"
 Write-Output "ICON_ICO $icoPath"
 Write-Output "ICON_PNG_DIR $pngDir"
+Write-Output "ICON_256 $(Join-Path $assetsDir 'BetterRNP-256.png')"
+Write-Output "ICON_512 $(Join-Path $assetsDir 'BetterRNP-512.png')"
+Write-Output "ICON_1024 $(Join-Path $assetsDir 'BetterRNP-1024.png')"

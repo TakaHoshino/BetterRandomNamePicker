@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace BetterRNP.Core;
 
 /// <summary>
@@ -7,9 +10,13 @@ namespace BetterRNP.Core;
 public sealed class AppPaths
 {
     public const string RootOverrideEnvironmentVariable = "BETTERRNP_HOME";
+    public const string DefaultSettingsRegistryKey = @"Software\BetterRNP\Settings";
+    public const string TestSettingsRegistryRoot = @"Software\BetterRNP\TestData";
 
     public AppPaths(string? root = null)
     {
+        var explicitRoot = !string.IsNullOrWhiteSpace(root);
+        IsExplicitRoot = explicitRoot;
         var configured = root;
         if (string.IsNullOrWhiteSpace(configured))
         {
@@ -36,9 +43,14 @@ public sealed class AppPaths
         Root = Path.GetFullPath(string.IsNullOrWhiteSpace(configured)
             ? AppContext.BaseDirectory
             : configured);
+        RegistrySettingsKey = explicitRoot
+            ? $@"{TestSettingsRegistryRoot}\{HashRoot(Root)}"
+            : DefaultSettingsRegistryKey;
     }
 
     public string Root { get; }
+    public bool IsExplicitRoot { get; }
+    public string RegistrySettingsKey { get; }
     public string DataDir => Path.Combine(Root, "data");
     public string SchemesDir => Path.Combine(DataDir, "schemes");
     public string BackupDir => Path.Combine(DataDir, "backup");
@@ -50,6 +62,7 @@ public sealed class AppPaths
     public string ThemeImagesDir => Path.Combine(ThemesDir, "images");
     public string ThemeConfigFile => Path.Combine(ThemesDir, "theme.properties");
     public string PluginsDir => Path.Combine(Root, "plugins");
+    public string PluginCacheDir => Path.Combine(DataDir, "plugin-cache");
 
     public void EnsureDirectories()
     {
@@ -60,5 +73,12 @@ public sealed class AppPaths
         Directory.CreateDirectory(ThemesDir);
         Directory.CreateDirectory(ThemeImagesDir);
         Directory.CreateDirectory(PluginsDir);
+        Directory.CreateDirectory(PluginCacheDir);
+    }
+
+    private static string HashRoot(string root)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(root));
+        return Convert.ToHexString(hash)[..16];
     }
 }

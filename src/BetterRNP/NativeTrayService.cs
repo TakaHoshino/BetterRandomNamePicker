@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using Forms = System.Windows.Forms;
 using Microsoft.Win32;
+using BetterRNP.Core;
 
 namespace BetterRNP;
 
@@ -58,7 +59,7 @@ public sealed class NativeTrayService : IDisposable
         _icon = LoadApplicationIcon();
         _notifyIcon = new Forms.NotifyIcon
         {
-            Text = "BetterRNP",
+            Text = LocalizationService.Get(UiText.ProductName),
             Icon = _icon,
             Visible = false
         };
@@ -75,9 +76,8 @@ public sealed class NativeTrayService : IDisposable
             return;
         }
         _notifyIcon.Visible = true;
-        _notifyIcon.BalloonTipTitle = "BetterRNP";
-        _notifyIcon.BalloonTipText =
-            "托盘图标已启用。如果任务栏右下角没有显示，请点击 ^ 查看隐藏图标。";
+        _notifyIcon.BalloonTipTitle = LocalizationService.Get(UiText.ProductName);
+        _notifyIcon.BalloonTipText = LocalizationService.Get(UiText.TrayEnabledHint);
         _notifyIcon.BalloonTipIcon = Forms.ToolTipIcon.Info;
         _notifyIcon.ShowBalloonTip(3000);
         _log?.Invoke(_notifyIcon.Visible
@@ -196,12 +196,16 @@ public sealed class NativeTrayService : IDisposable
 
         try
         {
-            AppendMenu(menu, MF_STRING, new UIntPtr(CommandShow), "显示主窗口");
-            AppendMenu(menu, MF_STRING, new UIntPtr(CommandHide), "隐藏主窗口");
+            AppendMenu(menu, MF_STRING, new UIntPtr(CommandShow), LocalizationService.Get(UiText.ShowMainWindow));
+            AppendMenu(menu, MF_STRING, new UIntPtr(CommandHide), LocalizationService.Get(UiText.HideMainWindow));
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
-            AppendMenu(menu, MF_STRING, new UIntPtr(CommandBall), "显示/隐藏悬浮球");
+            AppendMenu(
+                menu,
+                MF_STRING,
+                new UIntPtr(CommandBall),
+                LocalizationService.Get(UiText.ShowHideFloatingBall));
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
-            AppendMenu(menu, MF_STRING, new UIntPtr(CommandExit), "退出程序");
+            AppendMenu(menu, MF_STRING, new UIntPtr(CommandExit), LocalizationService.Get(UiText.Exit));
 
             SetForegroundWindow(owner);
             if (!GetCursorPos(out var point))

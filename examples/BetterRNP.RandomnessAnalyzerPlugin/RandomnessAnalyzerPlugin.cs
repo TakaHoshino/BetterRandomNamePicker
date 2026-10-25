@@ -8,6 +8,7 @@ namespace BetterRNP.RandomnessAnalyzerPlugin;
 public sealed class RandomnessAnalyzerPlugin : IPlugin
 {
     private IPluginContext? _context;
+    private IPluginLocalizationContext? _localization;
     private RandomnessAnalysisWindow? _window;
 
     public PluginManifest GetManifest() => new()
@@ -26,21 +27,46 @@ public sealed class RandomnessAnalyzerPlugin : IPlugin
     public void OnLoad(IPluginContext context)
     {
         _context = context;
+        if (context is IPluginLocalizationContext localization)
+        {
+            _localization = localization;
+            localization.RegisterRandomnessTranslations();
+        }
         if (context is ICurrentPickerPluginContext currentPicker)
         {
-            currentPicker.RegisterCurrentPickerCommand(
-                "analyze-randomness",
-                "分析抽取随机性…",
-                ShowAnalysis);
+            if (_localization is not null)
+            {
+                _localization.RegisterLocalizedCurrentPickerCommand(
+                    "analyze-randomness",
+                    () => _localization.T("分析抽取随机性…"),
+                    ShowAnalysis);
+            }
+            else
+            {
+                currentPicker.RegisterCurrentPickerCommand(
+                    "analyze-randomness",
+                    "分析抽取随机性…",
+                    ShowAnalysis);
+            }
             context.Log("随机性分析插件已加载（当前抽取模式接口）");
             return;
         }
         if (context is ISchemeCommandPluginContext schemeCommands)
         {
-            schemeCommands.RegisterSchemeCommand(
-                "analyze-randomness",
-                "分析抽取随机性…",
-                ShowSchemeAnalysis);
+            if (_localization is not null)
+            {
+                _localization.RegisterLocalizedSchemeCommand(
+                    "analyze-randomness",
+                    () => _localization.T("分析抽取随机性…"),
+                    ShowSchemeAnalysis);
+            }
+            else
+            {
+                schemeCommands.RegisterSchemeCommand(
+                    "analyze-randomness",
+                    "分析抽取随机性…",
+                    ShowSchemeAnalysis);
+            }
             context.Log("随机性分析插件已加载（方案快照兼容模式）");
             return;
         }
@@ -54,17 +80,22 @@ public sealed class RandomnessAnalyzerPlugin : IPlugin
         _window = null;
         _context?.Log("随机性分析插件已卸载");
         _context = null;
+        _localization = null;
     }
 
     private void ShowAnalysis(IPluginPickerSnapshot picker)
     {
         _window?.Close();
-        _window = new RandomnessAnalysisWindow(
+        var window = new RandomnessAnalysisWindow(
             picker,
-            message => _context?.Log(message))
+            _localization,
+            message => _context?.Log(message));
+        var owner = GetSafeOwner(window);
+        if (owner is not null)
         {
-            Owner = Application.Current?.MainWindow
-        };
+            window.Owner = owner;
+        }
+        _window = window;
         _window.Closed += (_, _) => _window = null;
         _window.Show();
         _context?.Log(
@@ -74,14 +105,26 @@ public sealed class RandomnessAnalyzerPlugin : IPlugin
     private void ShowSchemeAnalysis(IPluginModeContext scheme)
     {
         _window?.Close();
-        _window = new RandomnessAnalysisWindow(
+        var window = new RandomnessAnalysisWindow(
             scheme,
-            message => _context?.Log(message))
+            _localization,
+            message => _context?.Log(message));
+        var owner = GetSafeOwner(window);
+        if (owner is not null)
         {
-            Owner = Application.Current?.MainWindow
-        };
+            window.Owner = owner;
+        }
+        _window = window;
         _window.Closed += (_, _) => _window = null;
         _window.Show();
         _context?.Log($"打开随机性分析窗口（兼容模式）：方案={scheme.SchemeName}");
+    }
+
+    private static Window? GetSafeOwner(Window window)
+    {
+        var owner = Application.Current?.MainWindow;
+        return owner is { IsLoaded: true } && !ReferenceEquals(owner, window)
+            ? owner
+            : null;
     }
 }

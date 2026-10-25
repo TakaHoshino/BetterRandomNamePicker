@@ -64,7 +64,7 @@ public partial class SeatSettingsWindow : Window
         {
             if (notify)
             {
-                MessageBox.Show(this, "请输入有效的数字！", "错误",
+                MessageBox.Show(this, UiText.InvalidNumber, UiText.Error,
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             return false;
@@ -73,7 +73,7 @@ public partial class SeatSettingsWindow : Window
         {
             if (notify)
             {
-                MessageBox.Show(this, "行数和列数必须大于 0！", "错误",
+                MessageBox.Show(this, UiText.InvalidSeatDimensions, UiText.Error,
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             return false;
@@ -82,7 +82,10 @@ public partial class SeatSettingsWindow : Window
         {
             if (notify)
             {
-                MessageBox.Show(this, $"行数/列数过大：上限 {MaxRows} × {MaxCols}！", "错误",
+                MessageBox.Show(
+                    this,
+                    LocalizationService.Format(UiText.SeatDimensionsTooLargeFormat, MaxRows, MaxCols),
+                    UiText.Error,
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             return false;
@@ -106,8 +109,14 @@ public partial class SeatSettingsWindow : Window
         {
             details += " …";
         }
-        var choice = SeatConflictDialog.Choose(this,
-            $"当前行列 {rows} × {cols} 下有 {invalid.Count} 个已选座位越界：\n{details}");
+        var choice = SeatConflictDialog.Choose(
+            this,
+            LocalizationService.Format(
+                UiText.SeatOutOfRangeFormat,
+                rows,
+                cols,
+                invalid.Count,
+                details));
         switch (choice)
         {
             case SeatConflictChoice.Remove:
@@ -121,9 +130,15 @@ public partial class SeatSettingsWindow : Window
                 cols = Math.Max(cols, invalid.Max(p => (int)p.Y));
                 if (rows > MaxRows || cols > MaxCols)
                 {
-                    MessageBox.Show(this,
-                        $"自动扩展会超出行列上限（{MaxRows} × {MaxCols}），请改用“移除越界座位”。",
-                        "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(
+                        this,
+                        LocalizationService.Format(
+                            UiText.SeatLayoutExpansionTooLargeFormat,
+                            MaxRows,
+                            MaxCols),
+                        UiText.Error,
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                     return false;
                 }
                 RowsInput.Text = rows.ToString();
@@ -207,7 +222,7 @@ public partial class SeatSettingsWindow : Window
             return;
         }
         BuildSeatGrid();
-        MessageBox.Show(this, "座位布局已更新（尚未保存，点“保存设置”生效）", "提示",
+        MessageBox.Show(this, UiText.SeatLayoutUpdated, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -228,13 +243,13 @@ public partial class SeatSettingsWindow : Window
         if (_selectedSeats.Count == 0)
         {
             _services.Log.Write(LogLevel.Warn, $"方案={_schemeName}", "未选择座位，无法抽取");
-            MessageBox.Show(this, "请先选择座位！", "提示",
+            MessageBox.Show(this, UiText.SelectSeatsFirst, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         var seats = _selectedSeats.ToArray();
         _isPicking = true;
-        PickButton.Content = "停止";
+        LocalizationService.SetContent(PickButton, UiText.Stop);
         _lastResult = null;
         _picker = new RollingPicker(
             () =>
@@ -245,7 +260,7 @@ public partial class SeatSettingsWindow : Window
             value =>
             {
                 _lastResult = value;
-                ResultText.Text = $"抽取结果: {value}";
+                ResultText.Text = LocalizationService.Format(UiText.ResultFormat, value);
             });
         _picker.Start();
         _services.Log.Write(
@@ -255,7 +270,7 @@ public partial class SeatSettingsWindow : Window
     private void StopPicking()
     {
         _isPicking = false;
-        PickButton.Content = "开始抽取";
+        LocalizationService.SetContent(PickButton, UiText.Start);
         _picker?.Stop();
         _picker = null;
         if (_lastResult is not null)
@@ -282,7 +297,7 @@ public partial class SeatSettingsWindow : Window
         BuildSeatGrid();
         if (notify)
         {
-            MessageBox.Show(this, "设置已保存！", "提示",
+            MessageBox.Show(this, UiText.SaveSucceeded, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         return true;
@@ -295,7 +310,10 @@ public partial class SeatSettingsWindow : Window
             return;
         }
         _services.Log.Write($"方案={_schemeName}", "应用座位设置到方案");
-        MessageBox.Show(this, $"设置已应用到方案：{_schemeName}（已保存）", "提示",
+        MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.ApplyToSchemeFormat, _schemeName),
+            UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -312,7 +330,7 @@ public partial class SeatSettingsWindow : Window
             return;
         }
         var result = MessageBox.Show(this,
-            "当前座位设置尚未保存，确定放弃并关闭？", "提示",
+            UiText.DiscardSeatChangesConfirmation, UiText.Notice,
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result == MessageBoxResult.Yes)
         {

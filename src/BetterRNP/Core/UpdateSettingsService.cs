@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace BetterRNP.Core;
 
 public sealed class UpdateSettings
@@ -11,43 +8,43 @@ public sealed class UpdateSettings
 
 public sealed class UpdateSettingsService
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+    private readonly ISettingsStore _settings;
 
-    private readonly string _path;
-
-    public UpdateSettingsService(AppPaths paths)
+    public UpdateSettingsService(ISettingsStore settings)
     {
-        _path = Path.Combine(paths.DataDir, "update.json");
+        _settings = settings;
     }
 
-    public string SettingsPath => _path;
+    public string SettingsPath
+        => $@"{_settings.DisplayPath}\{SettingsSections.Update}";
 
     public UpdateSettings Load()
-    {
-        try
+        => new()
         {
-            return File.Exists(_path)
-                ? JsonSerializer.Deserialize<UpdateSettings>(File.ReadAllText(_path), Options)
-                  ?? new UpdateSettings()
-                : new UpdateSettings();
-        }
-        catch
-        {
-            return new UpdateSettings();
-        }
-    }
+            CheckOnStartup = _settings.GetBoolean(
+                SettingsSections.Update,
+                "CheckOnStartup",
+                fallback: true),
+            Source = Enum.TryParse<UpdateSource>(
+                _settings.GetString(SettingsSections.Update, "Source"),
+                ignoreCase: true,
+                out var source)
+                ? source
+                : UpdateSource.Official
+        };
 
     public void Save(UpdateSettings settings)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(settings, Options));
+            _settings.SetBoolean(
+                SettingsSections.Update,
+                "CheckOnStartup",
+                settings.CheckOnStartup);
+            _settings.SetString(
+                SettingsSections.Update,
+                "Source",
+                settings.Source.ToString());
         }
         catch
         {

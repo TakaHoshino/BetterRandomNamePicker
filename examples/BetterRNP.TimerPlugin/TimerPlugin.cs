@@ -12,6 +12,7 @@ namespace BetterRNP.TimerPlugin;
 public sealed class TimerPlugin : IPlugin
 {
     private IPluginContext? _context;
+    private IPluginLocalizationContext? _localization;
     private TimerWindow? _countUp;
     private TimerWindow? _countDown;
 
@@ -31,8 +32,24 @@ public sealed class TimerPlugin : IPlugin
     public void OnLoad(IPluginContext context)
     {
         _context = context;
-        context.RegisterFloatingBallCommand("count-up", "正计时", ShowCountUp);
-        context.RegisterFloatingBallCommand("count-down", "倒计时", ShowCountDown);
+        if (context is IPluginLocalizationContext localization)
+        {
+            _localization = localization;
+            localization.RegisterTimerTranslations();
+            localization.RegisterLocalizedFloatingBallCommand(
+                "count-up",
+                () => _localization.T("正计时"),
+                ShowCountUp);
+            localization.RegisterLocalizedFloatingBallCommand(
+                "count-down",
+                () => _localization.T("倒计时"),
+                ShowCountDown);
+        }
+        else
+        {
+            context.RegisterFloatingBallCommand("count-up", "正计时", ShowCountUp);
+            context.RegisterFloatingBallCommand("count-down", "倒计时", ShowCountDown);
+        }
         context.Log("计时插件已加载");
     }
 
@@ -42,6 +59,7 @@ public sealed class TimerPlugin : IPlugin
         CloseWindow(ref _countDown);
         _context?.Log("计时插件已卸载");
         _context = null;
+        _localization = null;
     }
 
     private void ShowCountUp()
@@ -59,7 +77,7 @@ public sealed class TimerPlugin : IPlugin
 
     private void ShowCountDown()
     {
-        var duration = new CountdownSetupWindow().PickDuration();
+        var duration = new CountdownSetupWindow(_localization).PickDuration();
         if (duration is not { } selected)
         {
             return;
@@ -74,7 +92,11 @@ public sealed class TimerPlugin : IPlugin
 
     private TimerWindow CreateWindow(TimerMode mode, TimeSpan duration)
     {
-        var window = new TimerWindow(mode, duration, message => _context?.Log(message));
+        var window = new TimerWindow(
+            mode,
+            duration,
+            message => _context?.Log(message),
+            _localization);
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(_countUp, window))

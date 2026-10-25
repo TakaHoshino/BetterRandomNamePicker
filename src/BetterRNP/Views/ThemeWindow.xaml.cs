@@ -13,23 +13,25 @@ public partial class ThemeWindow : Window
         public override string ToString() => Name;
     }
 
-    private sealed record ModeChoice(BackdropMode Mode, string Name)
+    private sealed record ModeChoice(BackdropMode Mode, string ResourceKey)
     {
+        public string Name => LocalizationService.Get(ResourceKey);
         public override string ToString() => Name;
     }
 
-    private sealed record CategoryChoice(string Id, string Name)
+    private sealed record CategoryChoice(string Id, string ResourceKey)
     {
+        public string Name => LocalizationService.Get(ResourceKey);
         public override string ToString() => Name;
     }
 
     private static readonly ModeChoice[] ModeChoices =
     {
-        new(BackdropMode.Fill, "填充（裁切填满）"),
-        new(BackdropMode.Fit, "适应（完整显示）"),
-        new(BackdropMode.Stretch, "拉伸"),
-        new(BackdropMode.Center, "居中"),
-        new(BackdropMode.Crop, "自由裁切")
+        new(BackdropMode.Fill, UiText.FillBackdropMode),
+        new(BackdropMode.Fit, UiText.FitBackdropMode),
+        new(BackdropMode.Stretch, UiText.StretchBackdropMode),
+        new(BackdropMode.Center, UiText.CenterBackdropMode),
+        new(BackdropMode.Crop, UiText.CropBackdropMode)
     };
 
     private readonly AppServices _services;
@@ -50,13 +52,35 @@ public partial class ThemeWindow : Window
             _services.Log.Write($"遮罩={_services.Theme.MaskAlpha}", "调整背景遮罩");
         };
         ImageList.ItemsSource = _images;
+        RefreshChoiceSources();
+        EnabledCheck.IsChecked = _services.Theme.IsEnabled;
+        RefreshImages();
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) => LocalizationService.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        var categoryId = SelectedCategory?.Id;
+        RefreshChoiceSources();
+        if (categoryId is not null)
+        {
+            CategoryList.SelectedItem = CategoryList.Items
+                .OfType<CategoryChoice>()
+                .FirstOrDefault(choice => choice.Id == categoryId);
+        }
+        RefreshImages();
+    }
+
+    private void RefreshChoiceSources()
+    {
+        GlobalModeCombo.ItemsSource = null;
+        CategoryModeCombo.ItemsSource = null;
         GlobalModeCombo.ItemsSource = ModeChoices;
         CategoryModeCombo.ItemsSource = ModeChoices;
         CategoryList.ItemsSource = ThemeService.CategoryIds
-            .Select(id => new CategoryChoice(id, ThemeService.CategoryLabels[id]))
+            .Select(id => new CategoryChoice(id, ThemeService.CategoryLabelKeys[id]))
             .ToList();
-        EnabledCheck.IsChecked = _services.Theme.IsEnabled;
-        RefreshImages();
     }
 
     private void RefreshImages(string? selectId = null)
@@ -74,7 +98,7 @@ public partial class ThemeWindow : Window
 
             var globalChoices = new List<ImageChoice>
             {
-                new(string.Empty, "（无）")
+                new(string.Empty, LocalizationService.Get(UiText.NoneOption))
             };
             globalChoices.AddRange(_images.Select(i => new ImageChoice(i.Id, i.DisplayName)));
             GlobalImageCombo.ItemsSource = globalChoices;
@@ -111,7 +135,7 @@ public partial class ThemeWindow : Window
 
         var choices = new List<ImageChoice>
         {
-            new(string.Empty, "（继承全局）")
+            new(string.Empty, LocalizationService.Get(UiText.InheritGlobalOption))
         };
         choices.AddRange(_images.Select(i => new ImageChoice(i.Id, i.DisplayName)));
         CategoryImageCombo.ItemsSource = choices;
@@ -136,8 +160,8 @@ public partial class ThemeWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "导入背景图片",
-            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff|所有文件|*.*"
+            Title = LocalizationService.Get(UiText.ImportBackdropTitle),
+            Filter = LocalizationService.Get(UiText.ImageFileFilter)
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -156,7 +180,10 @@ public partial class ThemeWindow : Window
         catch (Exception ex)
         {
             _services.Log.WriteException("IMPORT_THEME_IMAGE_ERROR", ex);
-            MessageBox.Show(this, $"导入失败：{ex.Message}", "错误",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.ImportFailureFormat, ex.Message),
+                UiText.Error,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -167,9 +194,12 @@ public partial class ThemeWindow : Window
         {
             return;
         }
-        var result = MessageBox.Show(this,
-            $"确定删除图片“{image.DisplayName}”吗？引用它的窗口将回退到全局或无色背景。",
-            "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.DeleteImageConfirmationFormat, image.DisplayName),
+            UiText.ConfirmDeletion,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
         if (result != MessageBoxResult.Yes)
         {
             _services.Log.Write($"图片={image.DisplayName}", "取消删除主题图片");
@@ -181,9 +211,12 @@ public partial class ThemeWindow : Window
 
     private void Reset_Click(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show(this,
-            "恢复默认会关闭照片背景并清除图片指定，但不会删除图库中的图片。继续吗？",
-            "恢复默认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = MessageBox.Show(
+            this,
+            UiText.RestoreThemeConfirmation,
+            UiText.RestoreDefaults,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
         if (result != MessageBoxResult.Yes)
         {
             _services.Log.Write("用户取消恢复默认主题", "恢复默认主题");
@@ -231,7 +264,7 @@ public partial class ThemeWindow : Window
         var image = _images.FirstOrDefault(item => item.Id == _services.Theme.GlobalImageId);
         if (image is null)
         {
-            MessageBox.Show(this, "请先为全局背景选择图片。", "裁切",
+            MessageBox.Show(this, UiText.SelectGlobalImageFirst, UiText.Crop,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -310,7 +343,7 @@ public partial class ThemeWindow : Window
         var image = _images.FirstOrDefault(item => item.Id == imageId);
         if (image is null)
         {
-            MessageBox.Show(this, "请先为该类别或全局背景选择图片。", "裁切",
+            MessageBox.Show(this, UiText.SelectCategoryImageFirst, UiText.Crop,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

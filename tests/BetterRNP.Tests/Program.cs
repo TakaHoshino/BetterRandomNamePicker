@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using BetterRNP.Core;
 using BetterRNP.Models;
 using BetterRNP.Modes;
@@ -50,6 +51,7 @@ internal static class Program
         try
         {
             RunCoreTests(root);
+            RunLocalizationTests(root);
             RunLogTests(root);
             RunPluginTests(root);
             RunTimerPluginTests(root);
@@ -79,7 +81,71 @@ internal static class Program
 
     private static void RunCoreTests(string root)
     {
+        var legacyRoot = Path.Combine(root, "legacy-settings");
+        var legacyPaths = new AppPaths(legacyRoot);
+        legacyPaths.EnsureDirectories();
+        File.WriteAllText(
+            legacyPaths.ConfigFile,
+            """
+            language=ja-JP
+            autoStart=true
+            minimizeToTray=false
+            autoShowFloatingBall=true
+            lastScheme=旧方案
+            floatingBallRadius=77
+            floatingBallOpacity=143
+            x7f9a2b1c4e8d3f6=legacy-password-hash
+            """);
+        File.WriteAllText(
+            legacyPaths.ThemeConfigFile,
+            """
+            enabled=true
+            mask=55
+            g.image=legacy.png
+            cat.main.mode=Crop
+            """);
+        File.WriteAllText(
+            Path.Combine(legacyPaths.DataDir, "update.json"),
+            """{"CheckOnStartup":false,"Source":"GhProxy"}""");
+        File.WriteAllText(
+            Path.Combine(legacyPaths.DataDir, "plugins.json"),
+            """{"Disabled":{"com.example.legacy":true}}""");
+        var migrated = AppServices.Create(legacyRoot);
+        Check("legacy general settings migrate to registry store",
+            migrated.Config.Language == LocalizationService.Japanese
+            && migrated.Config.AutoStart
+            && !migrated.Config.MinimizeToTray
+            && migrated.Config.AutoShowFloatingBall
+            && migrated.Config.LastScheme == "旧方案"
+            && migrated.Config.FloatingBallRadius == 77
+            && migrated.Config.FloatingBallOpacity == 143
+            && migrated.Config.PasswordHash == "legacy-password-hash");
+        Check("legacy update settings migrate to registry store",
+            !migrated.UpdateSettings.Load().CheckOnStartup
+            && migrated.UpdateSettings.Load().Source == UpdateSource.GhProxy);
+        Check("legacy theme settings migrate to registry store",
+            migrated.Theme.IsEnabled
+            && migrated.Theme.MaskAlpha == 55
+            && migrated.Theme.GlobalImageId == "legacy.png"
+            && migrated.Theme.GetCategoryMode(ThemeService.CategoryMain) == BackdropMode.Crop);
+        Check("legacy plugin settings migrate to registry store",
+            migrated.Settings.GetInt32(SettingsSections.DisabledPlugins, "com.example.legacy") == 1);
+        Check("legacy setting files are removed after migration",
+            !File.Exists(legacyPaths.ConfigFile)
+            && !File.Exists(legacyPaths.ThemeConfigFile)
+            && !File.Exists(Path.Combine(legacyPaths.DataDir, "update.json"))
+            && !File.Exists(Path.Combine(legacyPaths.DataDir, "plugins.json")));
+
         var services = AppServices.Create(root);
+
+        var staleCache = Path.Combine(services.Paths.PluginCacheDir, "stale-plugin");
+        Directory.CreateDirectory(staleCache);
+        File.WriteAllText(Path.Combine(staleCache, "plugin.dll"), "stale");
+        var cacheClean = PluginCacheService.Clear(services.Paths);
+        Check("startup cleanup removes stale plugin cache",
+            cacheClean.Success
+            && cacheClean.RemovedEntries == 1
+            && !Directory.EnumerateFileSystemEntries(services.Paths.PluginCacheDir).Any());
 
         Check("Java AES-GCM ciphertext decrypts",
             services.Encryption.DecryptData(JavaEncrypted, "兼容测试") == "张三\n李四\n");
@@ -272,6 +338,99 @@ internal static class Program
             seatCandidate is "(1, 2)" or "(2, 1)");
     }
 
+    private static void RunLocalizationTests(string root)
+    {
+        LocalizationService.Initialize(LocalizationService.SimplifiedChinese);
+        Check("all six interface languages are available",
+            LocalizationService.SupportedLanguages.Count == 6);
+        Check("Simplified Chinese remains the source language",
+            LocalizationService.T("设置") == "设置");
+        LocalizationService.SetLanguage(LocalizationService.English);
+        Check("English translation lookup works",
+            LocalizationService.T("设置") == "Settings");
+        LocalizationService.SetLanguage(LocalizationService.Russian);
+        Check("Russian translation lookup works",
+            LocalizationService.T("设置") == "Настройки");
+        LocalizationService.SetLanguage(LocalizationService.Japanese);
+        Check("Japanese translation lookup works",
+            LocalizationService.T("设置") == "設定");
+        var localizedDefaultScheme = new Scheme(
+            Scheme.BuiltInDefaultName,
+            Scheme.NameListType,
+            isBuiltIn: true);
+        Check("built-in scheme labels use translated mode names",
+            localizedDefaultScheme.DisplayName == "既定のプリセット（組み込み · 名前リスト）");
+        Check("new dialog resources are translated",
+            LocalizationService.Get(UiText.ExitConfirmationTitle) == "終了の確認"
+            && LocalizationService.Get(UiText.ImportFailureFormat).Contains("インポート", StringComparison.Ordinal));
+        LocalizationService.SetLanguage(LocalizationService.TraditionalChinese);
+        Check("Traditional Chinese translation lookup works",
+            LocalizationService.T("设置") == "設定");
+        LocalizationService.SetLanguage(LocalizationService.Cantonese);
+        Check("Cantonese translation overrides Traditional Chinese",
+            LocalizationService.T("悬浮球") == "浮動球"
+            && LocalizationService.T("开始抽取") == "開始抽籤");
+
+        LocalizationService.SetLanguage(LocalizationService.English);
+        var text = new TextBlock { Text = "设置" };
+        LocalizationService.ApplyTo(text);
+        Check("localization updates an existing visual element",
+            text.Text == "Settings");
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
+        LocalizationService.ApplyTo(text);
+        Check("localization restores the source language",
+            text.Text == "设置");
+
+        var expectedThemes = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [LocalizationService.SimplifiedChinese] = "主题",
+            [LocalizationService.TraditionalChinese] = "主題",
+            [LocalizationService.Cantonese] = "主題",
+            [LocalizationService.English] = "Theme",
+            [LocalizationService.Russian] = "Тема",
+            [LocalizationService.Japanese] = "テーマ"
+        };
+        var expectedSettings = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [LocalizationService.SimplifiedChinese] = "设置",
+            [LocalizationService.TraditionalChinese] = "設定",
+            [LocalizationService.Cantonese] = "設定",
+            [LocalizationService.English] = "Settings",
+            [LocalizationService.Russian] = "Настройки",
+            [LocalizationService.Japanese] = "設定"
+        };
+        var themeText = new TextBlock { Text = "主题" };
+        var settingsContent = new ContentControl { Content = "设置" };
+        var transitionFailures = new List<string>();
+        foreach (var sourcePair in expectedThemes)
+        {
+            LocalizationService.SetLanguage(sourcePair.Key);
+            LocalizationService.ApplyTo(themeText);
+            LocalizationService.ApplyTo(settingsContent);
+            foreach (var targetPair in expectedThemes)
+            {
+                LocalizationService.SetLanguage(targetPair.Key);
+                LocalizationService.ApplyTo(themeText);
+                LocalizationService.ApplyTo(settingsContent);
+                if (themeText.Text != targetPair.Value
+                    || (settingsContent.Content as string) != expectedSettings[targetPair.Key])
+                {
+                    transitionFailures.Add($"{sourcePair.Key}->{targetPair.Key}");
+                }
+            }
+        }
+        Check(
+            "all language transitions replace previous language text",
+            transitionFailures.Count == 0);
+
+        var services = AppServices.Create(Path.Combine(root, "localization"));
+        services.Config.SetLanguage(LocalizationService.Japanese);
+        var reloaded = AppServices.Create(Path.Combine(root, "localization"));
+        Check("language selection persists in configuration",
+            reloaded.Config.Language == LocalizationService.Japanese);
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
+    }
+
     private static void RunTimerPluginTests(string root)
     {
         const string manifest = """
@@ -305,6 +464,36 @@ internal static class Program
             plugins.FloatingBallCommands.Select(command => command.Title)
                 .SequenceEqual(new[] { "正计时", "倒计时" }));
         Check("timer plugin adds no main menu commands", plugins.Commands.Count == 0);
+        Check("timer menu titles start in Simplified Chinese",
+            plugins.FloatingBallCommands[0].DisplayTitle == "正计时"
+            && plugins.FloatingBallCommands[1].DisplayTitle == "倒计时");
+        LocalizationService.SetLanguage(LocalizationService.English);
+        Check("timer menu titles switch language dynamically",
+            plugins.FloatingBallCommands[0].DisplayTitle == "Count up"
+            && plugins.FloatingBallCommands[1].DisplayTitle == "Countdown");
+        var timerTitleExpectations = new Dictionary<string, (string CountUp, string CountDown)>(
+            StringComparer.Ordinal)
+        {
+            ["zh-Hans"] = ("正计时", "倒计时"),
+            ["zh-Hant"] = ("正計時", "倒計時"),
+            ["zh-HK"] = ("正計時", "倒數"),
+            ["en-US"] = ("Count up", "Countdown"),
+            ["ru-RU"] = ("Прямой отсчёт", "Обратный отсчёт"),
+            ["ja-JP"] = ("カウントアップ", "カウントダウン")
+        };
+        var timerLanguageFailures = new List<string>();
+        foreach (var (language, expected) in timerTitleExpectations)
+        {
+            LocalizationService.SetLanguage(language);
+            if (plugins.FloatingBallCommands[0].DisplayTitle != expected.CountUp
+                || plugins.FloatingBallCommands[1].DisplayTitle != expected.CountDown)
+            {
+                timerLanguageFailures.Add(language);
+            }
+        }
+        Check("all timer plugin languages replace previous titles",
+            timerLanguageFailures.Count == 0);
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
 
         var loaded = load.Info;
         Check("disabled timer plugin hides floating ball commands",
@@ -488,6 +677,30 @@ internal static class Program
         Check("randomness analyzer registers one current-picker command",
             plugins.Commands.Count == 1
             && plugins.Commands[0].Title == "分析抽取随机性…");
+        LocalizationService.SetLanguage(LocalizationService.Japanese);
+        Check("randomness analyzer command title switches language dynamically",
+            plugins.Commands[0].DisplayTitle == "抽選のランダム性を分析…");
+        var analyzerTitleExpectations = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["zh-Hans"] = "分析抽取随机性…",
+            ["zh-Hant"] = "分析抽取隨機性…",
+            ["zh-HK"] = "分析抽籤隨機性…",
+            ["en-US"] = "Analyze picker randomness…",
+            ["ru-RU"] = "Анализировать случайность выбора…",
+            ["ja-JP"] = "抽選のランダム性を分析…"
+        };
+        var analyzerLanguageFailures = new List<string>();
+        foreach (var (language, expected) in analyzerTitleExpectations)
+        {
+            LocalizationService.SetLanguage(language);
+            if (plugins.Commands[0].DisplayTitle != expected)
+            {
+                analyzerLanguageFailures.Add(language);
+            }
+        }
+        Check("all randomness analyzer languages replace previous titles",
+            analyzerLanguageFailures.Count == 0);
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
     }
 
     private sealed class TestModeContext : BetterRNP.PluginSdk.Abstractions.IPluginModeContext
@@ -662,14 +875,38 @@ internal static class Program
 
     private static void RunWindowConstructionTests(string root)
     {
-        var application = new App();
+        var application = new App(suppressStartup: true);
         application.InitializeComponent();
-        using (var trayService = new NativeTrayService(() => { }, () => { }, () => { }, () => { }))
+        try
         {
-            trayService.Install();
-            Check("native tray host becomes visible", trayService.IsInstalled);
+            RunWindowTestsCore(application, root);
         }
+        catch (Exception ex)
+        {
+            Fail($"window test host ({ex.GetType().Name}: {ex.Message})");
+        }
+        finally
+        {
+            application.Shutdown();
+        }
+    }
+
+    private static void RunWindowTestsCore(App application, string root)
+    {
         var services = AppServices.Create(root);
+        LocalizationService.SetLanguage(LocalizationService.English);
+        var localizationWindow = new AboutWindow();
+        try
+        {
+            Check("localization applies to newly loaded windows",
+                localizationWindow.Title == "About BetterRNP"
+                && ((TextBlock)localizationWindow.FindName("RepositoryLabel")).Text
+                    == "Repository:");
+        }
+        finally
+        {
+            LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
+        }
         using var pluginManager = new PluginManager(services);
         var updatePrompt = UpdateService.EvaluateReleaseJson("""
         {
@@ -693,7 +930,8 @@ internal static class Program
             new PasswordWindow(services, "密码验证", "请输入密码："),
             new ChangePasswordWindow(services),
             new TimerWindow(TimerMode.CountUp, TimeSpan.Zero),
-            new CountdownSetupWindow()
+            new CountdownSetupWindow(),
+            new AboutWindow()
         };
 
         foreach (var window in windows)
@@ -701,7 +939,9 @@ internal static class Program
             try
             {
                 window.Show();
-                window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                window.Dispatcher.Invoke(
+                    () => { },
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 window.Close();
                 Check($"window constructs: {window.GetType().Name}", true);
             }
@@ -709,6 +949,98 @@ internal static class Program
             {
                 Fail($"window constructs: {window.GetType().Name} ({ex.GetType().Name}: {ex.Message})");
             }
+        }
+
+        var settingsServices = AppServices.Create(Path.Combine(root, "settings-layout"));
+        using var settingsPlugins = new PluginManager(settingsServices);
+        var settingsDemoPackage = Path.Combine(root, "settings-demo.rnpp");
+        WritePluginPackage(
+            settingsDemoPackage,
+            """
+            {
+              "id": "com.betterrnp.demo",
+              "name": "BetterRNP 示例插件",
+              "version": "1.0.0",
+              "author": "BetterRNP",
+              "type": "mixed",
+              "assembly": "BetterRNP.DemoPlugin.dll",
+              "entryType": "BetterRNP.DemoPlugin.DemoPlugin",
+              "apiVersion": "1.0",
+              "description": "test"
+            }
+            """,
+            Path.Combine(AppContext.BaseDirectory, "BetterRNP.DemoPlugin.dll"));
+        settingsPlugins.LoadFromPackage(settingsDemoPackage, copyIntoPluginDirectory: false);
+        var settingsWindow = new SettingsWindow(settingsServices, settingsPlugins);
+        try
+        {
+            settingsWindow.Show();
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var pluginsNavigation = (TreeViewItem)settingsWindow.FindName("PluginsNavigation");
+            var languageCombo = (ComboBox)settingsWindow.FindName("LanguageCombo");
+            Check("settings expose all supported languages",
+                languageCombo.Items.Count == LocalizationService.SupportedLanguages.Count);
+            var pluginSettingNavigation = pluginsNavigation.Items
+                .OfType<TreeViewItem>()
+                .FirstOrDefault();
+            Check("settings navigation lists plugin settings", pluginSettingNavigation is not null);
+            if (pluginSettingNavigation is not null)
+            {
+                pluginSettingNavigation.IsSelected = true;
+                settingsWindow.Dispatcher.Invoke(
+                    () => { },
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                var host = (ContentControl)settingsWindow.FindName("PluginSettingsHost");
+                Check("plugin settings view is embedded in settings window",
+                    host.Visibility == Visibility.Visible && host.Content is FrameworkElement);
+            }
+            var interfaceNavigation = (TreeViewItem)settingsWindow.FindName("InterfaceNavigation");
+            interfaceNavigation.IsSelected = true;
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            Check("settings navigation switches core pages",
+                ((TextBlock)settingsWindow.FindName("SettingsPageTitle")).Text == "界面");
+            languageCombo.SelectedItem = languageCombo.Items
+                .OfType<ComboBoxItem>()
+                .First(item => item.Tag?.ToString() == LocalizationService.English);
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var localizedPageTitle = ((TextBlock)settingsWindow.FindName("SettingsPageTitle")).Text;
+            Check("language change updates the open settings window immediately",
+                localizedPageTitle == "Interface");
+            languageCombo.SelectedItem = languageCombo.Items
+                .OfType<ComboBoxItem>()
+                .First(item => item.Tag?.ToString() == LocalizationService.SimplifiedChinese);
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var radiusSlider = (Slider)settingsWindow.FindName("RadiusSlider");
+            var opacitySlider = (Slider)settingsWindow.FindName("OpacitySlider");
+            Check("floating ball sliders are continuous",
+                !radiusSlider.IsSnapToTickEnabled
+                && !opacitySlider.IsSnapToTickEnabled);
+            radiusSlider.Value = 70;
+            opacitySlider.Value = 120;
+            var resetButton = (Button)settingsWindow.FindName("ResetBallDefaultsButton");
+            resetButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            Check("reset restores floating ball defaults",
+                radiusSlider.Value == ConfigService.FloatingBallRadiusDefault
+                && opacitySlider.Value == ConfigService.FloatingBallOpacityDefault
+                && settingsServices.Config.FloatingBallRadius == ConfigService.FloatingBallRadiusDefault
+                && settingsServices.Config.FloatingBallOpacity == ConfigService.FloatingBallOpacityDefault);
+            settingsWindow.Close();
+        }
+        catch (Exception ex)
+        {
+            settingsWindow.Close();
+            Fail($"settings navigation integration ({ex.GetType().Name}: {ex.Message})");
         }
 
         var cropSource = services.Theme.ListImages().FirstOrDefault();
@@ -767,27 +1099,35 @@ internal static class Program
             copyIntoPluginDirectory: false);
         if (analyzerLoad.Success && analyzerPlugins.Commands.Count == 1)
         {
+            LocalizationService.SetLanguage(LocalizationService.English);
             analyzerPlugins.ExecuteCommand(analyzerPlugins.Commands[0], analysisWindow);
-            var openedAnalysis = Application.Current.Windows
-                .Cast<Window>()
+            var openedAnalysis = (Application.Current?.Windows.Cast<Window>() ?? [])
                 .Where(window => window.GetType().FullName
                     == "BetterRNP.RandomnessAnalyzerPlugin.Views.RandomnessAnalysisWindow")
                 .ToList();
             Check("current-picker command opens randomness analysis",
                 openedAnalysis.Count == 1);
+            Check("randomness analyzer window follows the host language",
+                openedAnalysis.Count == 1
+                && openedAnalysis[0].Title == "Randomness analysis");
             foreach (var opened in openedAnalysis)
             {
                 opened.Close();
             }
+            LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
         }
         else
         {
             Fail("current-picker command opens randomness analysis (plugin load failed)");
         }
 
-        CheckFloatingBallMenu(application, root);
         CheckCountdownDialog();
-        application.Shutdown();
+        using (var trayService = new NativeTrayService(() => { }, () => { }, () => { }, () => { }))
+        {
+            trayService.Install();
+            Check("native tray host becomes visible", trayService.IsInstalled);
+        }
+        CheckFloatingBallMenu(application, root);
     }
 
     private static void CheckCountdownDialog()
@@ -827,6 +1167,20 @@ internal static class Program
             (ballStyle & WS_EX_TOOLWINDOW) != 0 && (ballStyle & WS_EX_APPWINDOW) == 0);
         Check("floating ball does not steal window focus",
             (ballStyle & WS_EX_NOACTIVATE) != 0);
+        FloatingBallRuntimeState? publishedState = null;
+        EventHandler<FloatingBallRuntimeState> stateHandler = (_, state) => publishedState = state;
+        services.FloatingBallState.StateChanged += stateHandler;
+        ball.UpdateAppearance(64, 128);
+        ball.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        services.FloatingBallState.StateChanged -= stateHandler;
+        Check("floating ball publishes live geometry and color",
+            publishedState is
+            {
+                Width: > 0,
+                Height: > 0,
+                ColorHex: "#0078D7",
+                IsVisible: true
+            });
 
         var items = ball.ContextMenu.Items.OfType<MenuItem>().ToList();
         var headers = items.Select(item => item.Header?.ToString()).ToList();
@@ -850,9 +1204,52 @@ internal static class Program
             window.Close();
         }
 
+        LocalizationService.SetLanguage(LocalizationService.English);
+        shell.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        var englishTheme = FindMenuItem(shell, "Theme");
+        var englishThemeSubmenu = FindMenuItem(shell, "Enable photo background");
+        LocalizationService.SetLanguage(LocalizationService.Russian);
+        shell.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        var russianTheme = FindMenuItem(shell, "Тема");
+        var russianThemeSubmenu = FindMenuItem(shell, "Включить фоновое изображение");
+        Check("runtime language switch updates static menu items",
+            englishTheme is not null
+            && englishThemeSubmenu is not null
+            && russianTheme is not null
+            && russianThemeSubmenu is not null);
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
+
         ball.Close();
         shell.ShutdownPlugins();
         shell.Close();
+    }
+
+    private static MenuItem? FindMenuItem(DependencyObject root, string header)
+    {
+        if (root is MenuItem item && string.Equals(item.Header as string, header, StringComparison.Ordinal))
+        {
+            return item;
+        }
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            var match = FindMenuItem(child, header);
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+        if (root is Visual or System.Windows.Media.Media3D.Visual3D)
+        {
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                var match = FindMenuItem(VisualTreeHelper.GetChild(root, index), header);
+                if (match is not null)
+                {
+                    return match;
+                }
+            }
+        }
+        return null;
     }
 
     private static void RunPluginTests(string root)
@@ -906,14 +1303,97 @@ internal static class Program
         Check("plugin mode registers", plugins.Modes.Count == 1);
         Check("plugin mode display name",
             plugins.Modes[0].Mode.DisplayName == "插件示例模式");
+        Check("plugin registers an embeddable settings item",
+            plugins.SettingsItems.Count == 1
+            && plugins.SettingsItems[0].Title == "示例插件设置"
+            && plugins.SettingsItems[0].ViewFactory() is FrameworkElement);
+
+        var localizedSettingsView = (StackPanel)plugins.SettingsItems[0].ViewFactory();
+        LocalizationService.SetLanguage(LocalizationService.English);
+        Check("plugin command titles switch language dynamically",
+            plugins.Commands[0].DisplayTitle == "Demo plugin information");
+        Check("plugin settings title switches language dynamically",
+            plugins.SettingsItems[0].DisplayTitle == "Demo plugin settings");
+        Check("plugin mode names switch language dynamically",
+            plugins.Modes[0].Mode.DisplayName == "Demo picker mode");
+        var pluginTitleExpectations = new Dictionary<string, (string Command, string Settings, string Mode)>(
+            StringComparer.Ordinal)
+        {
+            ["zh-Hans"] = ("示例插件说明", "示例插件设置", "插件示例模式"),
+            ["zh-Hant"] = ("外掛範例說明", "範例外掛設定", "外掛範例模式"),
+            ["zh-HK"] = ("外掛例子說明", "例子外掛設定", "外掛例子模式"),
+            ["en-US"] = ("Demo plugin information", "Demo plugin settings", "Demo picker mode"),
+            ["ru-RU"] = ("Информация о демо-плагине", "Настройки демо-плагина", "Демонстрационный режим"),
+            ["ja-JP"] = ("プラグインの説明", "デモプラグイン設定", "デモ抽選モード")
+        };
+        var pluginLanguageFailures = new List<string>();
+        foreach (var (language, expected) in pluginTitleExpectations)
+        {
+            LocalizationService.SetLanguage(language);
+            if (plugins.Commands[0].DisplayTitle != expected.Command
+                || plugins.SettingsItems[0].DisplayTitle != expected.Settings
+                || plugins.Modes[0].Mode.DisplayName != expected.Mode)
+            {
+                pluginLanguageFailures.Add(language);
+            }
+        }
+        Check(
+            "all plugin languages replace previous plugin titles",
+            pluginLanguageFailures.Count == 0);
+        LocalizationService.SetLanguage(LocalizationService.English);
+        Check("plugin manager row metadata switches language",
+            plugins.Plugins[0].TypeLabel == "Core"
+            && plugins.Plugins[0].SourceLabel == "Built-in"
+            && plugins.Plugins[1].TypeLabel == "Mixed"
+            && plugins.Plugins[1].StateLabel == "Enabled"
+            && plugins.Plugins[1].ToggleText == "Disable");
+        var rowExpectations = new Dictionary<string, (string Core, string BuiltIn, string Mixed, string Enabled, string Disable)>(
+            StringComparer.Ordinal)
+        {
+            ["zh-Hans"] = ("核心", "内置", "混合", "已启用", "禁用"),
+            ["zh-Hant"] = ("核心", "內建", "混合", "已啟用", "停用"),
+            ["zh-HK"] = ("核心", "內建", "混合", "已啟用", "停用"),
+            ["en-US"] = ("Core", "Built-in", "Mixed", "Enabled", "Disable"),
+            ["ru-RU"] = ("Ядро", "Встроенный", "Смешанный", "Включён", "Отключить"),
+            ["ja-JP"] = ("コア", "組み込み", "複合", "有効", "無効化")
+        };
+        var rowLanguageFailures = new List<string>();
+        foreach (var (language, expected) in rowExpectations)
+        {
+            LocalizationService.SetLanguage(language);
+            if (plugins.Plugins[0].TypeLabel != expected.Core
+                || plugins.Plugins[0].SourceLabel != expected.BuiltIn
+                || plugins.Plugins[1].TypeLabel != expected.Mixed
+                || plugins.Plugins[1].StateLabel != expected.Enabled
+                || plugins.Plugins[1].ToggleText != expected.Disable)
+            {
+                rowLanguageFailures.Add(language);
+            }
+        }
+        Check("all languages replace previous plugin manager row metadata",
+            rowLanguageFailures.Count == 0);
+        LocalizationService.SetLanguage(LocalizationService.English);
+        Check("plugin settings view receives language change notifications",
+            localizedSettingsView.Children
+                .OfType<TextBlock>()
+                .Any(text => text.Text.Contains("This settings page", StringComparison.Ordinal)));
+        if (localizedSettingsView is IDisposable disposableView)
+        {
+            disposableView.Dispose();
+        }
+        LocalizationService.SetLanguage(LocalizationService.SimplifiedChinese);
 
         var loaded = load.Info!;
         Check("plugin can be disabled", plugins.SetEnabled(loaded.Manifest.Id, false));
         Check("disabled plugin hides commands and modes",
-            plugins.Commands.Count == 0 && plugins.Modes.Count == 0);
+            plugins.Commands.Count == 0
+            && plugins.Modes.Count == 0
+            && plugins.SettingsItems.Count == 0);
         Check("plugin can be enabled", plugins.SetEnabled(loaded.Manifest.Id, true));
         Check("enabled plugin restores commands and modes",
-            plugins.Commands.Count == 1 && plugins.Modes.Count == 1);
+            plugins.Commands.Count == 1
+            && plugins.Modes.Count == 1
+            && plugins.SettingsItems.Count == 1);
         Check("external plugin removal", plugins.RemoveExternal(loaded.Manifest.Id));
         Check("removed plugin leaves only built-in",
             plugins.Plugins.Count == 1 && plugins.Plugins[0].BuiltIn);

@@ -5,6 +5,8 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using BetterRNP.PluginSdk.Abstractions;
+using BetterRNP.TimerPlugin;
 using BetterRNP.TimerPlugin.Timing;
 
 namespace BetterRNP.TimerPlugin.Views;
@@ -20,13 +22,21 @@ public sealed class TimerWindow : Window
     private readonly Path _primaryGlyph;
     private readonly Button _primaryButton;
     private readonly Button _resetButton;
+    private readonly TextBlock _titleText;
+    private readonly Button _closeButton;
     private readonly DispatcherTimer _ticker;
     private readonly Action<string>? _log;
+    private readonly IPluginLocalizationContext? _localization;
 
-    public TimerWindow(TimerMode mode, TimeSpan duration, Action<string>? log = null)
+    public TimerWindow(
+        TimerMode mode,
+        TimeSpan duration,
+        Action<string>? log = null,
+        IPluginLocalizationContext? localization = null)
     {
         _engine = new TimerEngine(mode, duration);
         _log = log;
+        _localization = localization;
 
         Ui.ApplyPopupWindow(this);
         Width = 236;
@@ -47,8 +57,11 @@ public sealed class TimerWindow : Window
         Typography.SetNumeralAlignment(_timeText, FontNumeralAlignment.Tabular);
 
         _primaryGlyph = Ui.CreateIcon(Icons.Play, IconPaint.Fill, 15);
-        _primaryButton = Ui.IconButton(_primaryGlyph, "开始", Toggle);
-        _resetButton = Ui.IconButton(Ui.CreateIcon(Icons.Reset, IconPaint.FillAndStroke, 17), "重置", ResetTimer);
+        _primaryButton = Ui.IconButton(_primaryGlyph, localization.T("开始"), Toggle);
+        _resetButton = Ui.IconButton(
+            Ui.CreateIcon(Icons.Reset, IconPaint.FillAndStroke, 17),
+            localization.T("重置"),
+            ResetTimer);
         _resetButton.Margin = new Thickness(6, 0, 0, 0);
         _resetButton.Visibility = Visibility.Collapsed;
 
@@ -61,7 +74,22 @@ public sealed class TimerWindow : Window
         buttons.Children.Add(_resetButton);
 
         var body = new StackPanel();
-        body.Children.Add(BuildHeader(mode));
+        _titleText = new TextBlock
+        {
+            Text = mode == TimerMode.CountUp
+                ? localization.T("正计时")
+                : localization.T("倒计时"),
+            FontSize = 11,
+            Foreground = Ui.Subtle,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _closeButton = Ui.IconButton(
+            Ui.CreateIcon(Icons.Close, IconPaint.Stroke, 9, 1.4),
+            localization.T("关闭"),
+            Close,
+            24,
+            Ui.CloseHover);
+        body.Children.Add(BuildHeader());
         body.Children.Add(_timeText);
         body.Children.Add(buttons);
 
@@ -75,7 +103,18 @@ public sealed class TimerWindow : Window
         };
         _ticker.Tick += OnTick;
 
-        Closed += (_, _) => _ticker.Stop();
+        if (_localization is not null)
+        {
+            _localization.LanguageChanged += OnLanguageChanged;
+        }
+        Closed += (_, _) =>
+        {
+            _ticker.Stop();
+            if (_localization is not null)
+            {
+                _localization.LanguageChanged -= OnLanguageChanged;
+            }
+        };
         Ui.CenterOnScreen(this);
         Render();
     }
@@ -90,31 +129,17 @@ public sealed class TimerWindow : Window
         _engine.Start();
         _ticker.Start();
         Render();
-        Log($"{DescribeMode()}开始（{_engine.DisplayText}）");
+        Log(Format("{0}开始（{1}）", DescribeMode(), _engine.DisplayText));
     }
 
-    private UIElement BuildHeader(TimerMode mode)
+    private UIElement BuildHeader()
     {
-        var title = new TextBlock
-        {
-            Text = mode == TimerMode.CountUp ? "正计时" : "倒计时",
-            FontSize = 11,
-            Foreground = Ui.Subtle,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        var close = Ui.IconButton(
-            Ui.CreateIcon(Icons.Close, IconPaint.Stroke, 9, 1.4),
-            "关闭",
-            Close,
-            24,
-            Ui.CloseHover);
-        close.HorizontalAlignment = HorizontalAlignment.Right;
-        close.VerticalAlignment = VerticalAlignment.Center;
+        _closeButton.HorizontalAlignment = HorizontalAlignment.Right;
+        _closeButton.VerticalAlignment = VerticalAlignment.Center;
 
         var header = new Grid { Height = 24, Margin = new Thickness(0, 0, 0, 2) };
-        header.Children.Add(title);
-        header.Children.Add(close);
+        header.Children.Add(_titleText);
+        header.Children.Add(_closeButton);
         return header;
     }
 
@@ -124,7 +149,7 @@ public sealed class TimerWindow : Window
         {
             _engine.Pause();
             _ticker.Stop();
-            Log($"暂停（{_engine.DisplayText}）");
+            Log(Format("暂停（{0}）", _engine.DisplayText));
         }
         else
         {
@@ -132,8 +157,8 @@ public sealed class TimerWindow : Window
             _engine.Start();
             _ticker.Start();
             Log(resuming
-                ? $"继续（{_engine.DisplayText}）"
-                : $"{DescribeMode()}开始（{_engine.DisplayText}）");
+                ? Format("继续（{0}）", _engine.DisplayText)
+                : Format("{0}开始（{1}）", DescribeMode(), _engine.DisplayText));
         }
         Render();
     }
@@ -143,7 +168,7 @@ public sealed class TimerWindow : Window
         _ticker.Stop();
         _engine.Reset();
         Render();
-        Log($"重置（{_engine.DisplayText}）");
+        Log(Format("重置（{0}）", _engine.DisplayText));
     }
 
     private void OnTick(object? sender, EventArgs e)
@@ -156,16 +181,24 @@ public sealed class TimerWindow : Window
         }
 
         _ticker.Stop();
-        Log("倒计时结束");
+        Log(_localization.T("倒计时结束"));
         MessageBox.Show(
             this,
-            "倒计时结束。",
-            "倒计时",
+            _localization.T("倒计时结束。"),
+            _localization.T("倒计时"),
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
 
-    private string DescribeMode() => _engine.Mode == TimerMode.CountDown ? "倒计时" : "正计时";
+    private string DescribeMode() => _engine.Mode == TimerMode.CountDown
+        ? _localization.T("倒计时")
+        : _localization.T("正计时");
+
+    private string Format(string source, params object?[] arguments)
+        => string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            _localization.T(source),
+            arguments);
 
     private void Log(string message) => _log?.Invoke(message);
 
@@ -181,10 +214,10 @@ public sealed class TimerWindow : Window
 
         var caption = _engine.State switch
         {
-            TimerState.Running => "暂停",
-            TimerState.Paused => "继续",
-            TimerState.Finished => "重新开始",
-            _ => "开始"
+            TimerState.Running => _localization.T("暂停"),
+            TimerState.Paused => _localization.T("继续"),
+            TimerState.Finished => _localization.T("重新开始"),
+            _ => _localization.T("开始")
         };
         _primaryButton.ToolTip = caption;
         AutomationProperties.SetName(_primaryButton, caption);
@@ -193,5 +226,17 @@ public sealed class TimerWindow : Window
         _resetButton.Visibility = _engine.State is TimerState.Paused or TimerState.Finished
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private void OnLanguageChanged(object? sender, PluginLanguageChangedEventArgs e)
+    {
+        _titleText.Text = _engine.Mode == TimerMode.CountUp
+            ? _localization.T("正计时")
+            : _localization.T("倒计时");
+        _closeButton.ToolTip = _localization.T("关闭");
+        AutomationProperties.SetName(_closeButton, _localization.T("关闭"));
+        _resetButton.ToolTip = _localization.T("重置");
+        AutomationProperties.SetName(_resetButton, _localization.T("重置"));
+        Render();
     }
 }

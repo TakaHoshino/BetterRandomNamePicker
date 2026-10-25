@@ -6,7 +6,7 @@
 
 它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 当前版本：**BetterRNP 2.2.0**
+- 当前版本：**BetterRNP 2.3.0**
 - 运行环境：**Windows 10 / 11 64 位**
 
 ## 为什么选择 BetterRNP
@@ -14,6 +14,7 @@
 - **抽取过程直观**：点击开始后结果快速滚动，再点一次停止定格，比直接弹出结果更有现场氛围。
 - **一套程序覆盖三种场景**：随机点名、随机数字、随机座位共用同一套方案与交互。
 - **现场操作方便**：主窗口可隐藏到托盘，悬浮球可置顶显示，双击即可快速抽取。
+- **六种界面语言**：支持简体中文、繁體中文、繁體中文（粵語）、English、Русский 和日本語，设置中可即时切换。
 - **演示时保持焦点**：悬浮球不会从全屏视频抢焦点；抽取结束后会自动把键盘焦点还给 PPT 放映窗口，翻页笔可以继续翻页。
 - **数据保存在本地**：名单、数字范围和座位配置加密存储，并自动维护多份备份。
 - **可按需扩展**：通过 `.rnpp` 插件增加菜单命令或自定义抽取模式。
@@ -91,7 +92,7 @@
 - 数据同时保存在主目录、备份目录和日志目录，损坏时自动恢复。
 - 配置可锁定，防止现场误改名单或方案。
 - 密码散列使用 PBKDF2-HMAC-SHA256，并兼容旧版密码格式。
-- 所有数据默认保存在程序目录，不依赖云端账号。
+- 用户设置统一保存在当前用户注册表，名单、方案和主题图片保存在本地程序目录，不依赖云端账号。
 
 ## 下载与安装
 
@@ -110,7 +111,7 @@ Release 同时提供两种应用包：
 
 插件开发者还可以下载：
 
-- `BetterRNP.PluginSdk.1.1.0.nupkg`
+- `BetterRNP.PluginSdk.1.4.0.nupkg`
 
 ## 快速上手
 
@@ -123,15 +124,25 @@ Release 同时提供两种应用包：
 
 ## 数据位置
 
+应用设置统一保存在：
+
+```text
+HKEY_CURRENT_USER\Software\BetterRNP\Settings
+```
+
+其中包含常规、悬浮球、安全、更新、插件和主题设置。升级或移动程序目录不会丢失这些设置。
+
 程序默认在当前目录下创建：
 
 ```text
-data/      配置、方案、主题和插件状态
+data/      方案、加密名单、备份和主题图片
 log/       操作日志与加密备份
 plugins/   .rnpp 插件
 ```
 
-升级程序时不会覆盖已有 `data/` 和 `plugins/` 内容。
+升级程序时不会覆盖已有 `data/` 和 `plugins/` 内容。旧版
+`config.properties`、`theme.properties`、`update.json` 和 `plugins.json`
+会在首次启动时自动迁移到注册表，成功后删除旧设置文件。
 
 旧版 Java 版本保存的加密名单、数字和座位数据可以继续读取。旧 Java 插件 jar 不再兼容，请使用新的 `.rnpp` 插件。
 
@@ -170,6 +181,10 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 - [插件开发文档](docs/PLUGIN_SDK.md)
 - [代码签名文档](docs/CODE_SIGNING.md)
 - [日志说明](docs/LOGGING.md)
+- [设置存储说明](docs/SETTINGS_STORAGE.md)
+- [项目交接文档](docs/HANDOFF.md)
+- [多语言说明](docs/LOCALIZATION.md)
+- [BetterRNP v2.3.0 Release Note](docs/releases/v2.3.0.md)
 - [BetterRNP v2.2.0 Release Note](docs/releases/v2.2.0.md)
 - [BetterRNP v2.1.1 Release Note](docs/releases/v2.1.1.md)
 - [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)

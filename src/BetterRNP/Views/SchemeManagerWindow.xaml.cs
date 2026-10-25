@@ -17,6 +17,17 @@ public partial class SchemeManagerWindow : Window
         InitializeComponent();
         _services.Theme.Attach(this, ThemeService.CategoryScheme);
         ReloadSchemes();
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Closed += (_, _) => LocalizationService.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        var selectedName = (SchemeList.SelectedItem as Scheme)?.Name;
+        ReloadSchemes();
+        SchemeList.SelectedItem = SchemeList.Items
+            .OfType<Scheme>()
+            .FirstOrDefault(scheme => scheme.Name == selectedName);
     }
 
     private void ReloadSchemes()
@@ -41,42 +52,51 @@ public partial class SchemeManagerWindow : Window
         if (name.Length == 0)
         {
             _services.Log.Write(LogLevel.Warn, "方案名称为空", "创建方案被拒绝");
-            MessageBox.Show(this, "请输入方案名称！", "提示",
+            MessageBox.Show(this, UiText.EnterSchemeName, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (name.Length > MaxNameLength)
         {
             _services.Log.Write(LogLevel.Warn, $"名称={name}｜长度={name.Length}", "创建方案被拒绝");
-            MessageBox.Show(this, $"方案名称过长（上限 {MaxNameLength} 个字符）！", "提示",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.SchemeNameTooLongFormat, MaxNameLength),
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (name.IndexOfAny(InvalidCharacters.ToCharArray()) >= 0)
         {
             _services.Log.Write(LogLevel.Warn, $"名称={name}", "创建方案被拒绝");
-            MessageBox.Show(this, $"方案名称不能包含以下字符：{InvalidCharacters}", "提示",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.SchemeNameInvalidCharactersFormat, InvalidCharacters),
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (name == Scheme.BuiltInDefaultName)
         {
             _services.Log.Write(LogLevel.Warn, $"名称={name}", "创建方案被拒绝");
-            MessageBox.Show(this, $"“{name}”为内置方案保留名称，请换一个名称！", "提示",
+            MessageBox.Show(
+                this,
+                LocalizationService.Format(UiText.BuiltInSchemeNameReservedFormat, name),
+                UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!_services.Schemes.AddScheme(name, type))
         {
             _services.Log.Write(LogLevel.Warn, $"名称={name}｜类型={type}", "方案已存在");
-            MessageBox.Show(this, "方案名称已存在！", "提示",
+            MessageBox.Show(this, UiText.SchemeNameExists, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         SchemeNameInput.Clear();
         ReloadSchemes();
-        MessageBox.Show(this, "方案创建成功！", "提示",
+        MessageBox.Show(this, UiText.SchemeCreated, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -88,14 +108,17 @@ public partial class SchemeManagerWindow : Window
         }
         if (SchemeList.SelectedItem is not Scheme scheme)
         {
-            MessageBox.Show(this, "请选择要删除的方案！", "提示",
+            MessageBox.Show(this, UiText.SelectSchemeToDelete, UiText.Notice,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show(this,
-            $"确定要删除方案 \"{scheme.Name}\" 吗？这将删除所有相关数据。",
-            "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        var confirm = MessageBox.Show(
+            this,
+            LocalizationService.Format(UiText.DeleteSchemeConfirmationFormat, scheme.Name),
+            UiText.ConfirmDeletion,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes)
         {
             _services.Log.Write($"方案={scheme.Name}", "取消删除方案");
@@ -103,7 +126,7 @@ public partial class SchemeManagerWindow : Window
         }
         _services.Schemes.RemoveScheme(scheme.Name);
         ReloadSchemes();
-        MessageBox.Show(this, "方案删除成功！", "提示",
+        MessageBox.Show(this, UiText.SchemeDeleted, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -114,7 +137,7 @@ public partial class SchemeManagerWindow : Window
             return true;
         }
         _services.Log.Write(LogLevel.Warn, "方案管理窗口处于锁定状态", "操作被拒绝");
-        MessageBox.Show(this, "当前为锁定模式，请先解锁", "提示",
+        MessageBox.Show(this, UiText.ConfigurationIsLockedUnlockItFirst, UiText.Notice,
             MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
     }
