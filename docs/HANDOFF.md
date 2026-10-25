@@ -4,11 +4,11 @@
 >
 > 当前分支：`main`
 >
-> 当前工作区：`v2.3.1` 发布候选，安全策略改为可选密码与受控备用通道
+> 当前工作区：`v2.3.1` 已发布到 GitHub Releases
 
 Release：
 
-https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.3.0
+https://github.com/TakaHoshino/BetterRandomNamePicker/releases/tag/v2.3.1
 
 ## 维护约定
 
@@ -37,7 +37,7 @@ BetterRNP 是面向课堂、会议和活动现场的 Windows 随机抽取工具�
 5. 修复随机性分析插件把无效或自身窗口设为 `Owner` 的异常。
 6. 启动时在插件加载前清空 `data/plugin-cache`；清理失败只记日志。
 7. 应用设置统一迁移到 `HKCU\Software\BetterRNP\Settings`；旧设置文件成功后删除。
-8. 发布版本提升到 `v2.3.0`，插件 SDK 提升到 `1.4.0`。
+8. 主程序版本已提升到 `v2.3.1`，插件 SDK 保持 `1.4.0`。
 9. “设置 → 安全”新增 README 指引按钮，优先打开 GitHub 在线 README，失败时回退本地文件。
 10. 默认不设置密码；旧版内置默认密码散列会在升级时自动移除。
 11. `Ctrl+L` 备用通道默认关闭，仅在设置密码并完成鉴权后允许开启。
@@ -49,8 +49,8 @@ BetterRNP 是面向课堂、会议和活动现场的 Windows 随机抽取工具�
 - `dotnet build BetterRNP.sln -c Release --no-restore`：0 警告、0 错误。
 - `dotnet run --project tests/BetterRNP.Tests/BetterRNP.Tests.csproj --no-build`：184 项通过、0 项失败。
 - `tools/build-release.ps1`：fd/sc 发布包、随机性分析插件、SDK 1.4.0 和开发签名证书已生成。
-- GitHub Release `v2.3.0` 已发布，5 个附件均为 `uploaded` 状态。
-- 当前未发布改动不改变设置结构或插件 API；下一次发布时需并入 Release Notes。
+- GitHub Release `v2.3.1` 已发布，5 个附件均为 `uploaded` 状态。
+- `v2.3.1` 不改变设置结构或插件 API。
 
 ## 设置存储
 
