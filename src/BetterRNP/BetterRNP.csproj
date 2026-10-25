@@ -11,7 +11,7 @@
     <RootNamespace>BetterRNP</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\BetterRNP.ico</ApplicationIcon>
-    <Version>2.3.0</Version>
+    <Version>2.3.1</Version>
     <Authors>BetterRNP</Authors>
     <Description>课堂与活动场景的多功能随机抽取器</Description>
   </PropertyGroup>

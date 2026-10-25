@@ -2,7 +2,6 @@ namespace BetterRNP.Core;
 
 public static class UiText
 {
-    public const string TheBuiltInDefaultPasswordIsStillInUseUseChangePasswordToReplaceIt = "Ui.TheBuiltInDefaultPasswordIsStillInUseUseChangePasswordToReplaceIt";
     public const string Security = "Ui.Security";
     public const string InstallationType0 = "Ui.InstallationType0";
     public const string FilterByOperationOrDetails = "Ui.FilterByOperationOrDetails";
@@ -391,4 +390,12 @@ public static class UiText
     public const string PluginSettingsTitleFormat = "Ui.PluginSettingsTitleFormat";
     public const string ReadLogFailureFormat = "Ui.ReadLogFailureFormat";
     public const string ThemeUnsupportedImageFormat = "Ui.ThemeUnsupportedImageFormat";
+    public const string SecurityDocumentationHint = "Ui.SecurityDocumentationHint";
+    public const string OpenReadme = "Ui.OpenReadme";
+    public const string SetPassword = "Ui.SetPassword";
+    public const string NoPasswordStatus = "Ui.NoPasswordStatus";
+    public const string PasswordProtectedStatus = "Ui.PasswordProtectedStatus";
+    public const string AllowRecoveryShortcut = "Ui.AllowRecoveryShortcut";
+    public const string RecoveryShortcutHint = "Ui.RecoveryShortcutHint";
+    public const string NoPasswordWarning = "Ui.NoPasswordWarning";
 }

@@ -1,7 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
-    <sys:String x:Key="Ui.TheBuiltInDefaultPasswordIsStillInUseUseChangePasswordToReplaceIt">⚠ Используется встроенный пароль по умолчанию. Замените его через «Изменить пароль».</sys:String>
     <sys:String x:Key="Ui.Security">Безопасность</sys:String>
     <sys:String x:Key="Ui.InstallationType0">Тип установки: {0}</sys:String>
     <sys:String x:Key="Ui.FilterByOperationOrDetails">Фильтр по operation или details</sys:String>
@@ -230,6 +229,14 @@
     <sys:String x:Key="Ui.GhProxyMirrorAccelerated">Зеркало gh-proxy (ускоренное)</sys:String>
     <sys:String x:Key="Ui.DefaultSchemeName">Схема по умолчанию</sys:String>
     <sys:String x:Key="Ui.TrayEnabledHint">Значок в области уведомлений включён. Если он не отображается, нажмите ^, чтобы показать скрытые значки.</sys:String>
+    <sys:String x:Key="Ui.SecurityDocumentationHint">Сведения о пароле по умолчанию и резервном канале Ctrl+L приведены в README.md.</sys:String>
+    <sys:String x:Key="Ui.OpenReadme">Открыть README</sys:String>
+    <sys:String x:Key="Ui.SetPassword">Задать пароль</sys:String>
+    <sys:String x:Key="Ui.NoPasswordStatus">Пароль не задан. Настройки по умолчанию разблокированы.</sys:String>
+    <sys:String x:Key="Ui.PasswordProtectedStatus">Пароль задан и защищает настройки.</sys:String>
+    <sys:String x:Key="Ui.AllowRecoveryShortcut">Включить резервный канал Ctrl+L</sys:String>
+    <sys:String x:Key="Ui.RecoveryShortcutHint">Резервный канал по умолчанию отключён. Задайте пароль и разблокируйте настройки, чтобы изменить его. После включения нажмите Ctrl+L 10 раз в окне пароля для восстановления доступа.</sys:String>
+    <sys:String x:Key="Ui.NoPasswordWarning">⚠ Пароль не задан. Списки имён и наборы могут быть изменены без разрешения. Задайте пароль в разделе «Настройки → Безопасность».</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

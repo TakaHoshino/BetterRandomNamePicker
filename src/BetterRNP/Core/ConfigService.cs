@@ -20,6 +20,11 @@ public sealed class ConfigService
 
     public string? PasswordHash => _settings.GetString(SettingsSections.Security, "PasswordHash");
 
+    public bool RecoveryShortcutEnabled => _settings.GetBoolean(
+        SettingsSections.Security,
+        "AllowRecoveryShortcut",
+        fallback: false);
+
     public string Language => LocalizationService.NormalizeLanguage(
         _settings.GetString(SettingsSections.General, "language")
         ?? System.Globalization.CultureInfo.CurrentUICulture.Name);
@@ -88,11 +93,17 @@ public sealed class ConfigService
             "floatingBallOpacity",
             Math.Clamp(value, FloatingBallOpacityMinimum, FloatingBallOpacityMaximum)));
 
-    public void SetPasswordHash(string hash)
+    public void SetPasswordHash(string? hash)
         => Persist(() => _settings.SetString(
             SettingsSections.Security,
             "PasswordHash",
             hash));
+
+    public void SetRecoveryShortcutEnabled(bool enabled)
+        => Persist(() => _settings.SetBoolean(
+            SettingsSections.Security,
+            "AllowRecoveryShortcut",
+            enabled));
 
     public void Save()
         => Persist(_settings.MarkCurrentSchema);

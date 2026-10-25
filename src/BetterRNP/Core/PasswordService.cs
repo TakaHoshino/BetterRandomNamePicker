@@ -2,7 +2,9 @@ namespace BetterRNP.Core;
 
 public sealed class PasswordService
 {
-    public const string BuiltInDefaultPassword = "#include<bits/stdc++.h>usingnamespacestd;intmain(){return0;}";
+    // Used only to identify and remove the obsolete built-in password from old installations.
+    private const string LegacyBuiltInPassword =
+        "#include<bits/stdc++.h>usingnamespacestd;intmain(){return0;}";
 
     private readonly ConfigService _config;
     private readonly EncryptionService _encryption;
@@ -16,23 +18,26 @@ public sealed class PasswordService
         _config = config;
         _encryption = encryption;
         _log = log;
-        EnsureDefaultPassword();
+        RemoveLegacyDefaultPassword();
+        _unlocked = !HasPassword;
     }
 
-    public bool IsLocked => !_unlocked;
+    public bool HasPassword => !string.IsNullOrWhiteSpace(_config.PasswordHash);
 
-    public void EnsureDefaultPassword()
-    {
-        if (!string.IsNullOrWhiteSpace(_config.PasswordHash))
-        {
-            return;
-        }
-        _config.SetPasswordHash(_encryption.HashPassword(BuiltInDefaultPassword));
-        _log.Write("已初始化内置默认密码", "PASSWORD_INIT");
-    }
+    public bool IsLocked => HasPassword && !_unlocked;
+
+    public bool RecoveryShortcutEnabled => _config.RecoveryShortcutEnabled;
+
+    public bool CanConfigureRecoveryShortcut => HasPassword && !IsLocked;
 
     public bool VerifyAndUnlock(string password)
     {
+        if (!HasPassword)
+        {
+            _unlocked = true;
+            return true;
+        }
+
         var hash = _config.PasswordHash;
         if (string.IsNullOrWhiteSpace(hash) || !_encryption.VerifyPassword(password, hash))
         {
@@ -50,36 +55,70 @@ public sealed class PasswordService
         return true;
     }
 
-    public bool ChangePassword(string newPassword)
+    public bool SetPassword(string newPassword)
     {
         if (newPassword.Length < 4 || newPassword.Length > 100)
         {
             _log.Write(LogLevel.Warn, $"长度={newPassword.Length}", "密码修改被拒绝");
             return false;
         }
+        if (HasPassword && IsLocked)
+        {
+            _log.Write(LogLevel.Warn, "未鉴权修改密码", "操作被拒绝");
+            return false;
+        }
+
+        var hadPassword = HasPassword;
         _config.SetPasswordHash(_encryption.HashPassword(newPassword));
-        _log.Write("密码已修改", "PASSWORD_CHANGED");
+        _unlocked = true;
+        _log.Write(hadPassword ? "密码已修改" : "密码已设置", "PASSWORD_CHANGED");
         return true;
     }
 
-    public bool IsUsingBuiltInDefaultPassword()
-    {
-        var hash = _config.PasswordHash;
-        return string.IsNullOrWhiteSpace(hash)
-            || _encryption.VerifyPassword(BuiltInDefaultPassword, hash);
-    }
+    public bool ChangePassword(string newPassword) => SetPassword(newPassword);
 
     public void Lock()
     {
+        if (!HasPassword)
+        {
+            _unlocked = true;
+            return;
+        }
         _unlocked = false;
         _log.Write("配置已锁定", "PASSWORD_LOCK");
     }
 
-    public void Unlock() => _unlocked = true;
+    public void Unlock()
+    {
+        if (HasPassword)
+        {
+            _unlocked = true;
+        }
+    }
 
-    /// <summary>Keeps the original Ctrl+L × 10 recovery shortcut.</summary>
+    public bool SetRecoveryShortcutEnabled(bool enabled)
+    {
+        if (!CanConfigureRecoveryShortcut)
+        {
+            _log.Write(LogLevel.Warn, "未鉴权修改备用通道设置", "操作被拒绝");
+            return false;
+        }
+
+        _config.SetRecoveryShortcutEnabled(enabled);
+        _log.Write(
+            enabled ? "启用" : "禁用",
+            "PASSWORD_RECOVERY_SHORTCUT");
+        return true;
+    }
+
+    /// <summary>Keeps the original Ctrl+L × 10 recovery shortcut, when explicitly enabled.</summary>
     public bool RegisterCtrlL()
     {
+        if (!HasPassword || !IsLocked || !RecoveryShortcutEnabled)
+        {
+            return false;
+        }
+
         var now = DateTime.UtcNow;
         if (now - _lastCtrlL > TimeSpan.FromSeconds(2))
         {
@@ -97,8 +136,17 @@ public sealed class PasswordService
         return true;
     }
 
-    public static void ResetCtrlLCount()
+    private void RemoveLegacyDefaultPassword()
     {
-        // Kept as a compatibility-facing helper; counts are per PasswordWindow.
+        var hash = _config.PasswordHash;
+        if (string.IsNullOrWhiteSpace(hash)
+            || !_encryption.VerifyPassword(LegacyBuiltInPassword, hash))
+        {
+            return;
+        }
+
+        _config.SetPasswordHash(null);
+        _config.SetRecoveryShortcutEnabled(false);
+        _log.Write("已移除旧版内置默认密码", "PASSWORD_DEFAULT_REMOVED");
     }
 }

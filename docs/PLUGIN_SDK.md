@@ -4,7 +4,7 @@
 
 当前版本约定：
 
-- 主程序版本：BetterRNP 2.3.0
+- 主程序版本：BetterRNP 2.3.1
 - 插件 SDK 版本：`BetterRNP.PluginSdk 1.4.0`
 - 插件 API 版本：`1.0`
 - 插件包扩展名：`.rnpp`

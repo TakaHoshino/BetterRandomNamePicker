@@ -1,7 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
-    <sys:String x:Key="Ui.TheBuiltInDefaultPasswordIsStillInUseUseChangePasswordToReplaceIt">⚠ 組み込みの既定パスワードが使用されています。「パスワードを変更」から変更してください。</sys:String>
     <sys:String x:Key="Ui.Security">セキュリティ</sys:String>
     <sys:String x:Key="Ui.InstallationType0">インストール形式：{0}</sys:String>
     <sys:String x:Key="Ui.FilterByOperationOrDetails">操作または詳細で絞り込む</sys:String>
@@ -230,6 +229,14 @@
     <sys:String x:Key="Ui.GhProxyMirrorAccelerated">gh-proxy ミラー（高速化）</sys:String>
     <sys:String x:Key="Ui.DefaultSchemeName">既定のプリセット</sys:String>
     <sys:String x:Key="Ui.TrayEnabledHint">トレイアイコンを有効にしました。通知領域に表示されない場合は、^ をクリックして非表示のアイコンを表示してください。</sys:String>
+    <sys:String x:Key="Ui.SecurityDocumentationHint">既定のパスワードと Ctrl+L 復旧チャネルの詳細は README.md を参照してください。</sys:String>
+    <sys:String x:Key="Ui.OpenReadme">README を表示</sys:String>
+    <sys:String x:Key="Ui.SetPassword">パスワードを設定</sys:String>
+    <sys:String x:Key="Ui.NoPasswordStatus">パスワードは未設定です。設定は既定でロック解除されています。</sys:String>
+    <sys:String x:Key="Ui.PasswordProtectedStatus">パスワードが設定され、設定が保護されています。</sys:String>
+    <sys:String x:Key="Ui.AllowRecoveryShortcut">Ctrl+L 復旧チャネルを有効にする</sys:String>
+    <sys:String x:Key="Ui.RecoveryShortcutHint">復旧チャネルは既定で無効です。パスワードを設定してロックを解除すると変更できます。有効にすると、パスワード入力ウィンドウで Ctrl+L を 10 回押すことでアクセスを復元できます。</sys:String>
+    <sys:String x:Key="Ui.NoPasswordWarning">⚠ パスワードが未設定です。名前リストやプリセットが不正に変更される可能性があります。「設定 → セキュリティ」でパスワードを設定してください。</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

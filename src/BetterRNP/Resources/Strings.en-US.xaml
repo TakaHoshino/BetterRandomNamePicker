@@ -1,7 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
-    <sys:String x:Key="Ui.TheBuiltInDefaultPasswordIsStillInUseUseChangePasswordToReplaceIt">⚠ The built-in default password is still in use. Use “Change password” to replace it.</sys:String>
     <sys:String x:Key="Ui.Security">Security</sys:String>
     <sys:String x:Key="Ui.InstallationType0">Installation type: {0}</sys:String>
     <sys:String x:Key="Ui.FilterByOperationOrDetails">Filter by operation or details</sys:String>
@@ -230,6 +229,14 @@
     <sys:String x:Key="Ui.GhProxyMirrorAccelerated">gh-proxy mirror (accelerated)</sys:String>
     <sys:String x:Key="Ui.DefaultSchemeName">Default scheme</sys:String>
     <sys:String x:Key="Ui.TrayEnabledHint">The tray icon is enabled. If it is not visible in the notification area, click ^ to show hidden icons.</sys:String>
+    <sys:String x:Key="Ui.SecurityDocumentationHint">See README.md for details about the default password and the Ctrl+L recovery channel.</sys:String>
+    <sys:String x:Key="Ui.OpenReadme">View README</sys:String>
+    <sys:String x:Key="Ui.SetPassword">Set password</sys:String>
+    <sys:String x:Key="Ui.NoPasswordStatus">No password is configured. Settings are unlocked by default.</sys:String>
+    <sys:String x:Key="Ui.PasswordProtectedStatus">A password is configured and protects settings.</sys:String>
+    <sys:String x:Key="Ui.AllowRecoveryShortcut">Enable the Ctrl+L recovery channel</sys:String>
+    <sys:String x:Key="Ui.RecoveryShortcutHint">The recovery channel is off by default. Set a password and unlock settings to change it. When enabled, press Ctrl+L 10 times in the password window to restore access.</sys:String>
+    <sys:String x:Key="Ui.NoPasswordWarning">⚠ No password is configured. Name lists and schemes may be modified without authorization. Set a password in Settings → Security.</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
     <sys:String x:Key="Language.Japanese">日本語</sys:String>

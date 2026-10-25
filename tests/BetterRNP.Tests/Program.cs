@@ -136,6 +136,16 @@ internal static class Program
             && !File.Exists(Path.Combine(legacyPaths.DataDir, "update.json"))
             && !File.Exists(Path.Combine(legacyPaths.DataDir, "plugins.json")));
 
+        var legacyDefaultRoot = Path.Combine(root, "legacy-default-password");
+        var legacyDefaultServices = AppServices.Create(legacyDefaultRoot);
+        legacyDefaultServices.Config.SetPasswordHash(
+            legacyDefaultServices.Encryption.HashPassword(
+                "#include<bits/stdc++.h>usingnamespacestd;intmain(){return0;}"));
+        var upgradedPasswordServices = AppServices.Create(legacyDefaultRoot);
+        Check("obsolete built-in default password is removed on upgrade",
+            !upgradedPasswordServices.Passwords.HasPassword
+            && !upgradedPasswordServices.Passwords.IsLocked);
+
         var services = AppServices.Create(root);
 
         var staleCache = Path.Combine(services.Paths.PluginCacheDir, "stale-plugin");
@@ -160,13 +170,25 @@ internal static class Program
         Check("AES-GCM round trip",
             services.Encryption.DecryptData(roundTrip, "roundtrip") == "第1名\n第2名\n");
 
-        Check("default password verifies",
-            services.Passwords.VerifyAndUnlock(PasswordService.BuiltInDefaultPassword));
-        Check("password change",
-            services.Passwords.ChangePassword("better-pass-2026"));
+        Check("new installations start without a password",
+            !services.Passwords.HasPassword && !services.Passwords.IsLocked);
+        Check("recovery shortcut cannot be enabled without a password",
+            !services.Passwords.SetRecoveryShortcutEnabled(true));
+        Check("user can set an optional password",
+            services.Passwords.SetPassword("better-pass-2026")
+            && services.Passwords.HasPassword
+            && !services.Passwords.IsLocked);
+        Check("authenticated user can enable recovery shortcut",
+            services.Passwords.SetRecoveryShortcutEnabled(true)
+            && services.Passwords.RecoveryShortcutEnabled);
         services.Passwords.Lock();
-        Check("old password rejected after change",
-            !services.Passwords.VerifyAndUnlock(PasswordService.BuiltInDefaultPassword));
+        Check("wrong password rejected",
+            !services.Passwords.VerifyAndUnlock("wrong-password"));
+        Check("enabled recovery shortcut unlocks after ten Ctrl+L presses",
+            Enumerable.Range(0, 9).All(_ => !services.Passwords.RegisterCtrlL())
+            && services.Passwords.RegisterCtrlL()
+            && !services.Passwords.IsLocked);
+        services.Passwords.Lock();
         Check("new password accepted",
             services.Passwords.VerifyAndUnlock("better-pass-2026"));
 
@@ -830,6 +852,8 @@ internal static class Program
             schemeLog.Detail.Contains("方案=日志方案", StringComparison.Ordinal)
             && schemeLog.Detail.Contains("范围=[3,9]", StringComparison.Ordinal));
 
+        services.Passwords.SetPassword("log-password");
+        services.Passwords.Lock();
         services.Passwords.VerifyAndUnlock("wrong-password");
         var failedPassword = log.ReadEntries().Last(entry => entry.Operation == "PASSWORD_FAILED");
         Check("failed password attempts are logged as warnings",
@@ -1018,6 +1042,20 @@ internal static class Program
             settingsWindow.Dispatcher.Invoke(
                 () => { },
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var securityNavigation = (TreeViewItem)settingsWindow.FindName("SecurityNavigation");
+            securityNavigation.IsSelected = true;
+            settingsWindow.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            Check("security settings link to README instructions",
+                ((TextBlock)settingsWindow.FindName("SecurityDocumentationText"))
+                    .Text.Contains("README.md", StringComparison.Ordinal)
+                && ((Button)settingsWindow.FindName("OpenReadmeButton")).IsVisible);
+            Check("security settings show optional-password state",
+                ((TextBlock)settingsWindow.FindName("PasswordStatusText"))
+                    .Text.Contains("未设置密码", StringComparison.Ordinal)
+                && ((CheckBox)settingsWindow.FindName("RecoveryShortcutCheck")).IsEnabled == false
+                && ((Button)settingsWindow.FindName("LockButton")).Visibility == Visibility.Collapsed);
             var radiusSlider = (Slider)settingsWindow.FindName("RadiusSlider");
             var opacitySlider = (Slider)settingsWindow.FindName("OpacitySlider");
             Check("floating ball sliders are continuous",
@@ -1158,6 +1196,14 @@ internal static class Program
 
         var shell = new MainWindow(services);
         typeof(App).GetProperty(nameof(App.ShellWindow))!.SetValue(application, shell);
+        var noPasswordWarning = (TextBlock)shell.FindName("NoPasswordWarningText");
+        Check("main window warns when no password is configured",
+            noPasswordWarning.Visibility == Visibility.Visible
+            && noPasswordWarning.FontSize == 11);
+        services.Passwords.SetPassword("ball-menu-password");
+        shell.RefreshLanguage();
+        Check("main window hides password warning after password is set",
+            noPasswordWarning.Visibility == Visibility.Collapsed);
 
         var ball = new FloatingBallWindow(services, application);
         ball.Show();

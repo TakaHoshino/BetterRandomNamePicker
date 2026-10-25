@@ -40,6 +40,10 @@
 
             <Border Grid.Row="0" Style="{StaticResource CardStyle}">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -68,6 +72,14 @@
                             Content="{DynamicResource Ui.Settings}"
                             Style="{StaticResource SecondaryButton}"
                             Click="Settings_Click" />
+                    <TextBlock x:Name="NoPasswordWarningText"
+                               Grid.Row="1"
+                               Grid.ColumnSpan="5"
+                               Text="{DynamicResource Ui.NoPasswordWarning}"
+                               Foreground="#C03030"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="0,7,0,0" />
                 </Grid>
             </Border>
 

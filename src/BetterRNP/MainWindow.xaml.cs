@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         _services.Theme.Attach(this, ThemeService.CategoryMain);
         RefreshPluginMenu();
         RefreshModeNames(null);
+        UpdatePasswordWarning();
         Loaded += OnLoaded;
         Closing += OnClosing;
     }
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _services.Log.Write("主窗口已显示", "显示主窗口");
+        UpdatePasswordWarning();
         LoadSchemes(_services.Config.LastScheme);
         ModeCombo.SelectedIndex = 0;
         UpdateModeSpecificButtons();
@@ -286,6 +288,7 @@ public partial class MainWindow : Window
     public void RefreshLanguage()
     {
         var modeId = _currentMode?.Id;
+        UpdatePasswordWarning();
         LoadSchemes(CurrentScheme?.Name);
         RefreshModeNames(null, modeId);
         UpdateModeSpecificButtons();
@@ -520,6 +523,14 @@ public partial class MainWindow : Window
         _services.Log.Write("窗口=系统设置", "打开窗口");
         new SettingsWindow(_services, _plugins) { Owner = this }.ShowDialog();
         ThemeEnabledItem.IsChecked = _services.Theme.IsEnabled;
+        UpdatePasswordWarning();
+    }
+
+    private void UpdatePasswordWarning()
+    {
+        NoPasswordWarningText.Visibility = _services.Passwords.HasPassword
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     public void ShowNumberSettingsWindow()

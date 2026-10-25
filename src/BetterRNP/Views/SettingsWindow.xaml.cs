@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -263,7 +264,7 @@ public partial class SettingsWindow : Window
         LogPathText.Text = LocalizationService.Format(
             UiText.LogFilePathFormat,
             _services.Log.LogFile);
-        UpdateLockButton();
+        UpdateSecurityControls();
     }
 
     private void FlushAppearanceSettings()
@@ -322,10 +323,7 @@ public partial class SettingsWindow : Window
             _previewOpacity = opacity;
             OpacitySlider.Value = Math.Clamp(opacity, (int)OpacitySlider.Minimum, (int)OpacitySlider.Maximum);
             OpacityValue.Text = OpacityText(opacity);
-            UpdateLockButton();
-            DefaultPasswordWarning.Visibility = _services.Passwords.IsUsingBuiltInDefaultPassword()
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            UpdateSecurityControls();
             LogPathText.Text = LocalizationService.Format(
                 UiText.LogFilePathFormat,
                 _services.Log.LogFile);
@@ -605,6 +603,11 @@ public partial class SettingsWindow : Window
 
     private void Lock_Click(object sender, RoutedEventArgs e)
     {
+        if (!_services.Passwords.HasPassword)
+        {
+            return;
+        }
+
         if (_services.Passwords.IsLocked)
         {
             _services.Log.Write("请求解锁配置", "解锁配置");
@@ -638,16 +641,26 @@ public partial class SettingsWindow : Window
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
-        UpdateLockButton();
+        UpdateSecurityControls();
     }
 
-    private void UpdateLockButton()
+    private void UpdateSecurityControls()
     {
+        var hasPassword = _services.Passwords.HasPassword;
+        LocalizationService.SetText(
+            PasswordStatusText,
+            hasPassword ? UiText.PasswordProtectedStatus : UiText.NoPasswordStatus);
+        LockButton.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
         LocalizationService.SetContent(
             LockButton,
             _services.Passwords.IsLocked
                 ? UiText.ConfigurationLockedButton
                 : UiText.ConfigurationUnlockedButton);
+        LocalizationService.SetContent(
+            ChangePasswordButton,
+            hasPassword ? UiText.ChangePassword : UiText.SetPassword);
+        RecoveryShortcutCheck.IsChecked = _services.Passwords.RecoveryShortcutEnabled;
+        RecoveryShortcutCheck.IsEnabled = _services.Passwords.CanConfigureRecoveryShortcut;
     }
 
     private void ChangePassword_Click(object sender, RoutedEventArgs e)
@@ -660,23 +673,94 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        _services.Log.Write("窗口=修改密码", "打开窗口");
-        var verify = new PasswordWindow(
-            _services,
-            UiText.VerifyOriginalPassword,
-            UiText.EnterOriginalPassword)
+        if (_services.Passwords.HasPassword)
         {
-            Owner = this
-        };
-        verify.ShowDialog();
-        if (!verify.Verified)
+            _services.Log.Write("窗口=修改密码", "打开窗口");
+            var verify = new PasswordWindow(
+                _services,
+                UiText.VerifyOriginalPassword,
+                UiText.EnterOriginalPassword)
+            {
+                Owner = this
+            };
+            verify.ShowDialog();
+            if (!verify.Verified)
+            {
+                return;
+            }
+        }
+        else
+        {
+            _services.Log.Write("窗口=设置密码", "打开窗口");
+        }
+
+        new ChangePasswordWindow(_services) { Owner = this }.ShowDialog();
+        UpdateSecurityControls();
+    }
+
+    private void RecoveryShortcut_Click(object sender, RoutedEventArgs e)
+    {
+        if (_loading)
         {
             return;
         }
-        new ChangePasswordWindow(_services) { Owner = this }.ShowDialog();
-        DefaultPasswordWarning.Visibility = _services.Passwords.IsUsingBuiltInDefaultPassword()
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        _services.Passwords.SetRecoveryShortcutEnabled(
+            RecoveryShortcutCheck.IsChecked == true);
+        UpdateSecurityControls();
+    }
+
+    private void OpenReadme_Click(object sender, RoutedEventArgs e)
+    {
+        var remoteReadme = $"{UpdateService.RepositoryUrl}/blob/main/README.md";
+        if (TryOpenReadme(remoteReadme))
+        {
+            return;
+        }
+
+        var localReadme = FindLocalReadme();
+        if (localReadme is not null && TryOpenReadme(localReadme))
+        {
+            return;
+        }
+
+        _services.Log.Write(
+            LogLevel.Warn,
+            $"无法打开远程或本地 README：{remoteReadme}",
+            "README_OPEN_ERROR");
+    }
+
+    private static bool TryOpenReadme(string target)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(target)
+            {
+                UseShellExecute = true
+            });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? FindLocalReadme()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var start in new[] { AppContext.BaseDirectory, Environment.CurrentDirectory })
+        {
+            var directory = new DirectoryInfo(start);
+            for (var depth = 0; directory is not null && depth < 8; depth++, directory = directory.Parent)
+            {
+                var candidate = Path.Combine(directory.FullName, "README.md");
+                if (seen.Add(candidate) && File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+        return null;
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
