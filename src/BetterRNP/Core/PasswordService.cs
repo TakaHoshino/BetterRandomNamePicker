@@ -111,7 +111,7 @@ public sealed class PasswordService
         return true;
     }
 
-    /// <summary>Keeps the original Ctrl+L × 10 recovery shortcut, when explicitly enabled.</summary>
+    /// <summary>Keeps the compatibility recovery gesture, when explicitly enabled.</summary>
     public bool RegisterCtrlL()
     {
         if (!HasPassword || !IsLocked || !RecoveryShortcutEnabled)
@@ -132,7 +132,7 @@ public sealed class PasswordService
         }
         _ctrlLCount = 0;
         _unlocked = true;
-        _log.Write(LogLevel.Warn, "Ctrl+L 备用通道已解锁配置", "PASSWORD_BACKDOOR");
+        _log.Write(LogLevel.Warn, "备用解锁通道已解锁配置", "PASSWORD_BACKDOOR");
         return true;
     }
 

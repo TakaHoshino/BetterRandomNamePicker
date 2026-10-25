@@ -6,7 +6,7 @@
 
 它把随机点名、随机数字和随机座位集中在一个轻量桌面程序中：不用准备表格公式，也不用临时写脚本，选择方案和模式后即可开始滚动抽取。程序支持常驻系统托盘、悬浮球快速抽取、加密本地存储、可配置的照片背景，以及 `.rnpp` 插件扩展。
 
-- 当前版本：**BetterRNP 2.3.1**
+- 当前版本：**BetterRNP 2.3.2**
 - 运行环境：**Windows 10 / 11 64 位**
 
 ## 为什么选择 BetterRNP
@@ -203,6 +203,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 - [多语言说明](docs/LOCALIZATION.md)
 - [BetterRNP v2.3.0 Release Note](docs/releases/v2.3.0.md)
 - [BetterRNP v2.3.1 Release Note](docs/releases/v2.3.1.md)
+- [BetterRNP v2.3.2 Release Note](docs/releases/v2.3.2.md)
 - [BetterRNP v2.2.0 Release Note](docs/releases/v2.2.0.md)
 - [BetterRNP v2.1.1 Release Note](docs/releases/v2.1.1.md)
 - [BetterRNP v2.1.0 Release Note](docs/releases/v2.1.0.md)

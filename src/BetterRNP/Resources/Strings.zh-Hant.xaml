@@ -229,13 +229,13 @@
     <sys:String x:Key="Ui.GhProxyMirrorAccelerated">gh-proxy 代理來源（加速）</sys:String>
     <sys:String x:Key="Ui.DefaultSchemeName">預設方案</sys:String>
     <sys:String x:Key="Ui.TrayEnabledHint">托盤圖示已啟用。如果工作列右下角沒有顯示，請點擊 ^ 查看隱藏圖示。</sys:String>
-    <sys:String x:Key="Ui.SecurityDocumentationHint">預設密碼與 Ctrl+L 備用解鎖通道的詳細說明請參閱 README.md。</sys:String>
+    <sys:String x:Key="Ui.SecurityDocumentationHint">密碼保護與備用解鎖通道的詳細說明請參閱 README.md。</sys:String>
     <sys:String x:Key="Ui.OpenReadme">查看 README</sys:String>
     <sys:String x:Key="Ui.SetPassword">設定密碼</sys:String>
     <sys:String x:Key="Ui.NoPasswordStatus">目前未設定密碼，設定預設保持解鎖狀態。</sys:String>
     <sys:String x:Key="Ui.PasswordProtectedStatus">已設定密碼，設定受密碼保護。</sys:String>
-    <sys:String x:Key="Ui.AllowRecoveryShortcut">啟用 Ctrl+L 備用解鎖通道</sys:String>
-    <sys:String x:Key="Ui.RecoveryShortcutHint">備用通道預設關閉。設定密碼並完成解鎖後可以修改；啟用後，在密碼輸入視窗連續按 Ctrl+L 10 次可恢復存取。</sys:String>
+    <sys:String x:Key="Ui.AllowRecoveryShortcut">啟用備用解鎖通道</sys:String>
+    <sys:String x:Key="Ui.RecoveryShortcutHint">備用解鎖通道預設關閉。設定密碼並完成鑑權後可以修改；啟用後請妥善保管密碼。</sys:String>
     <sys:String x:Key="Ui.NoPasswordWarning">⚠ 目前未設定密碼，名單和方案可能被未經授權修改。請在「設定 → 安全性」中設定密碼。</sys:String>
     <sys:String x:Key="Language.Cantonese">繁體中文（粵語）</sys:String>
     <sys:String x:Key="Language.English">English</sys:String>
